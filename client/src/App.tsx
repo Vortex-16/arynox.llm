@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { Routes, Route, Link } from 'react-router-dom'
 import LoginPage from './login/login_page/src/App'
@@ -17,12 +17,14 @@ function App() {
   const sliderRef = useRef<HTMLDivElement>(null);
   const targetX = useRef(0);
   const currentX = useRef(0);
+  const [featuresProgress, setFeaturesProgress] = useState(0);
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       // Normalize wheel delta for consistency
       const speed = 0.05;
-      targetX.current = Math.max(0, Math.min(100, targetX.current + e.deltaY * speed));
+      // Range is now 0-200 (0-100 for Home->Features, 100-200 for Features Transition)
+      targetX.current = Math.max(0, Math.min(400, targetX.current + e.deltaY * speed));
     };
 
     window.addEventListener('wheel', handleWheel, { passive: true });
@@ -36,8 +38,15 @@ function App() {
       currentX.current += (targetX.current - currentX.current) * lerpFactor;
       
       if (sliderRef.current) {
-        gsap.set(sliderRef.current, { x: `-${currentX.current}vw` });
+        // Clamp slider x to -100vw since Features stays pinned while layering Feature 2
+        const xPos = Math.min(currentX.current, 100);
+        gsap.set(sliderRef.current, { x: `-${xPos}vw` });
       }
+
+      // Sync featuresProgress state so Features re-renders reactively
+      // Only update when value changes meaningfully to avoid 60fps re-renders
+      const fp = Math.max(0, currentX.current - 100);
+      setFeaturesProgress(prev => Math.abs(prev - fp) > 0.1 ? fp : prev);
     };
 
     gsap.ticker.add(tick);
@@ -123,7 +132,7 @@ function App() {
 
               {/* Slide 2: Features */}
               <div className="w-[100vw] h-full shrink-0">
-                <Features />
+                <Features scrollProgress={featuresProgress} />
               </div>
 
             </div>
