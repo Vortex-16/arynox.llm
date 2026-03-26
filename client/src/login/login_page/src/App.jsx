@@ -30,11 +30,23 @@ export default function App() {
     ];
 
     useEffect(() => {
+        // Auto-login check
+        const storedUser = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+        if (storedUser && token) {
+            const user = JSON.parse(storedUser);
+            if (user.role === 'teacher') {
+                navigate('/teacher');
+            } else {
+                navigate('/student');
+            }
+        }
+
         const timer = setInterval(() => {
             setSlideIndex((prev) => (prev + 1) % slides.length);
         }, 5000);
         return () => clearInterval(timer);
-    }, [slides.length]);
+    }, [slides.length, navigate]);
 
     const handleGoogleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
@@ -207,7 +219,12 @@ export default function App() {
                 gsap.to([".form-container", ".google-btn"], {
                     delay: .4,
                     duration: .1,
-                    opacity: 0
+                    opacity: 0,
+                    onComplete: () => {
+                        // For demo/manual auth placeholder: redirect to student
+                        // In a real app, you'd call an API here.
+                        navigate('/student');
+                    }
                 });
             }
         };
