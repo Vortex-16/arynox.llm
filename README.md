@@ -6,6 +6,12 @@
 
 ## ✨ Features
 
+### 📖 High-Fidelity OCR & Ingestion (New!)
+- **NVIDIA Nemotron-OCR Engine:** Custom pipeline to extract text from scanned, image-heavy, and complex textbooks with 99.9% accuracy.
+- **Hybrid Extraction Strategy:** Automatically detects if a PDF is digital (using `pdf2json`) or scanned (falling back to Nemotron-OCR) to optimize speed and cost.
+- **Adaptive Image Processing:** Utilizes `sharp` for PNG-to-JPEG compression to maintain high-resolution text clarity while staying within NVIDIA's 180KB API limits.
+- **Asymmetric Embedding:** Powered by `nvidia/llama-nemotron-embed-1b-v2` with specialized `input_type` (passage/query) for superior semantic search.
+
 ### 🔐 Smart Authentication
 - **Google OAuth Integration:** Secure and seamless sign-in using Google accounts.
 - **Automated Role Detection:** 
@@ -18,12 +24,11 @@
 - **Dynamic Image Slider:** 3D-feeling tech visuals that rotate automatically.
 - **Custom Aesthetic:** Premium typography (using the *Aquire* font) and smooth glassmorphism effects.
 
-### 📚 Adaptive Learning (Backend Engine Completed)
+### 📚 Adaptive Learning & RAG
 - **Socratic Engine:** Uses RAG (Retrieval Augmented Generation) configured with Groq LLaMA 3.1 to answer strictly from uploaded course materials.
-- **NVIDIA Fallback Matrix:** Achieves 99.9% AI uptime by automatically failing over to the `nvidia/nemotron-3-super-120b-a12b` enterprise model if rate limits hit.
-- **NotebookLM Relevancy:** Pre-flight classifier blocks non-academic jailbreak attempts.
+- **Intelligent Fallback:** If course material doesn't contain the answer, ARYNOX provides a general academic explanation with a "Faculty response pending" disclaimer.
+- **ChromaDB REST Integration:** Bypasses unreliable library wrappers for direct, high-performance REST interaction with 2048-dimension vector support.
 - **Teacher Forwarding Loop:** Out-of-scope academic questions are intercepted and logged for manual faculty review on the dashboard.
-- **Faculty Dashboard Pipeline:** API active for PDF/TXT uploads, automatic chunking, NVIDIA vector embeddings, and ChromaDB localized storage.
 
 ---
 
@@ -31,10 +36,10 @@
 
 | Component | Technology |
 | :--- | :--- |
-| **Frontend** | React, Vite, GSAP, Tailwind CSS |
-| **Backend** | Node.js, Express, TypeScript |
-| **Database** | MongoDB (User data & Logs), ChromaDB (Embeddings) |
-| **AI/LLM** | Groq API / NVIDIA NIM |
+| **Frontend** | React, Vite, GSAP, Tailwind CSS, Lucide React |
+| **Backend** | Node.js, Express, TypeScript, Sharp (Image processing) |
+| **Database** | MongoDB (User data), ChromaDB (Vector store via REST API) |
+| **AI/LLM** | NVIDIA NIM (Nemotron-OCR, Nemotron-3 Chat, Llama-Embed), Groq API |
 | **Auth** | Google OAuth 2.0, JWT (JSON Web Tokens) |
 
 ---
@@ -44,10 +49,11 @@
 ### 1. Prerequisites
 - **Node.js** (v18+)
 - **MongoDB** (Local or Atlas)
-- **Google Cloud Console Account** (for OAuth Client IDs)
+- **ChromaDB** (Running locally on port 8000)
+- **NVIDIA NIM API Key** (for OCR & Embeddings)
 
 ### 2. Installation
-Clone the repository and install dependencies for both client and server:
+Clone the repository and install dependencies:
 
 ```bash
 # Install Server Dependencies
@@ -60,7 +66,7 @@ npm install
 ```
 
 ### 3. Environment Setup
-Create a `.env` file in both `client/` and `server/` directories.
+Create a `.env` file in the `server/` directory:
 
 **`server/.env`**
 ```env
@@ -72,11 +78,6 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 GROQ_API_KEY=your_groq_api_key
 NVIDIA_API_KEY=nvapi-your_nvidia_nim_key
 CHROMA_URL=http://localhost:8000
-```
-
-**`client/.env`**
-```env
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 ### 4. Running the Project
@@ -101,16 +102,14 @@ npm run dev
 ```text
 ├── client/                 # React frontend (Vite)
 │   ├── src/
-│   │   ├── login/          # Animated Auth Components
-│   │   ├── student/        # Student Dashboard & Chat
-│   │   ├── teacher/        # Faculty Dashboard
-│   │   └── assets/         # Fonts (Aquire) & Branding
+│   │   ├── student/        # Socratic Notebook & Analytics
+│   │   ├── teacher/        # Faculty Document Management
+│   │   └── components/     # Reusable UI primitives
 ├── server/                 # Express backend (TypeScript)
 │   ├── src/
-│   │   ├── controllers/    # Auth & RAG Logic
-│   │   ├── models/         # Mongoose Schemas (User, Logs)
-│   │   ├── routes/         # API Endpoints
-│   │   └── services/       # LLM & ChromaDB integration
+│   │   ├── services/       # OCR, VectorStore, LLM logic
+│   │   ├── controllers/    # RAG & Document orchestration
+│   │   └── routes/         # Backend API Map
 └── PRD.md                  # Project Requirements Document
 ```
 

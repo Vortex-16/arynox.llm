@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, CheckSquare, Square, FileText, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MoreVertical, MessageSquare, PlusCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessage {
     id: string;
@@ -16,13 +17,12 @@ interface SourceDocument {
 }
 
 export default function Notebook() {
-    const [messages, setMessages] = useState<ChatMessage[]>([
-        {
-            id: '1',
-            role: 'assistant',
-            content: "Hello! I am your AI Socratic Tutor. You currently have 3 sources selected. Try asking: \"What are the key themes across these documents?\" or request a quiz."
-        }
-    ]);
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const targetDocId = queryParams.get('docId');
+    const targetDocName = queryParams.get('name');
+
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
@@ -57,13 +57,22 @@ export default function Notebook() {
                 const res = await fetch(`http://localhost:5000/api/documents?className=${encodeURIComponent(studentProfile.className)}&department=${encodeURIComponent(studentProfile.department)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    const mappedSources = data.map((doc: any, index: number) => ({
+                    const mappedSources = data.map((doc: any) => ({
                         id: doc._id,
                         name: doc.title,
                         wordCount: 'Processed File',
-                        selected: index < 3
+                        // Select by default if it was the one clicked from the dashboard, else first 3
+                        selected: targetDocId ? doc._id === targetDocId : true
                     }));
                     setSources(mappedSources);
+                    
+                    // Set initial welcome message after sources are loaded
+                    const selectedCount = mappedSources.filter((s: any) => s.selected).length;
+                    setMessages([{
+                        id: '1',
+                        role: 'assistant',
+                        content: `Hello! I am your AI Socratic Tutor. You currently have ${selectedCount} source${selectedCount !== 1 ? 's' : ''} selected. ${targetDocName ? `I've pre-loaded **${targetDocName}** for you.` : ''} Try asking me anything about these materials!`
+                    }]);
                 }
             } catch (err) {
                 console.error("Failed to load documents:", err);
@@ -73,7 +82,7 @@ export default function Notebook() {
         };
         fetchDocuments();
         fetchSessions();
-    }, []);
+    }, [targetDocId, targetDocName]);
 
     const loadSession = async (id: string) => {
         try {
@@ -95,7 +104,7 @@ export default function Notebook() {
         setMessages([{
             id: '1',
             role: 'assistant',
-            content: "Hello! I am your AI Socratic Tutor. You currently have " + sources.filter(s => s.selected).length + " sources selected. How can I help?"
+            content: "Hello! I am your AI Socratic Tutor. You currently have " + sources.filter((s: SourceDocument) => s.selected).length + " sources selected. How can I help?"
         }]);
     };
 
@@ -104,7 +113,7 @@ export default function Notebook() {
     }, [messages]);
 
     const toggleSource = (id: string) => {
-        setSources(prev => prev.map(s => s.id === id ? { ...s, selected: !s.selected } : s));
+        setSources((prev: SourceDocument[]) => prev.map((s: SourceDocument) => s.id === id ? { ...s, selected: !s.selected } : s));
     };
 
     const simulateAudioGeneration = () => {
@@ -126,14 +135,11 @@ export default function Notebook() {
             content: inputMessage.trim()
         };
 
-        setMessages(prev => [...prev, userMsg]);
+        setMessages((prev: ChatMessage[]) => [...prev, userMsg]);
         setInputMessage('');
         setIsTyping(true);
 
         try {
-            // Forward the query to our Node backend.
-            // The backend handles semantic search in ChromaDB, academic relevancy filtering,
-            // Socratic prompting, and AI failovers automatically.
             const response = await fetch('http://localhost:5000/api/chat/ask', {
                 method: 'POST',
                 headers: {
@@ -152,9 +158,9 @@ export default function Notebook() {
             if (response.ok && data.answer) {
                 if (!sessionId && data.sessionId) {
                     setSessionId(data.sessionId);
-                    fetchSessions(); // refresh history list
+                    fetchSessions(); 
                 }
-                setMessages(prev => [...prev, {
+                setMessages((prev: ChatMessage[]) => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: 'assistant',
                     content: data.answer
@@ -164,7 +170,7 @@ export default function Notebook() {
             }
         } catch (error) {
             console.error("Chat Error:", error);
-            setMessages(prev => [...prev, {
+            setMessages((prev: ChatMessage[]) => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
                 content: "I'm having trouble connecting to my neural core right now. Please try again in a moment."
@@ -174,7 +180,7 @@ export default function Notebook() {
         }
     };
 
-    const selectedCount = sources.filter(s => s.selected).length;
+    const selectedCount = sources.filter((s: SourceDocument) => s.selected).length;
 
     return (
         <div className="flex h-screen w-full bg-[#131314] text-[#e3e3e3] overflow-hidden font-sans">
@@ -350,7 +356,7 @@ export default function Notebook() {
                                         <div className={`text-[15px] leading-relaxed break-words pt-1 ${isAI ? 'text-[#e3e3e3]' : 'text-[#e3e3e3]'}`}>
                                             {isAI ? (
                                                 <div className="prose prose-invert prose-p:leading-relaxed max-w-none text-[#e3e3e3]">
-                                                    {msg.content}
+                                                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                                                 </div>
                                             ) : (
                                                 <div className="inline-block bg-[#1e1f20] px-4 py-2.5 rounded-[20px] rounded-tl-sm text-[#e3e3e3]">

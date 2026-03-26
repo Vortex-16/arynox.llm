@@ -143,7 +143,7 @@ export default function StudentAnalyticsDashboard() {
                                 ) : (
                                     <>
                                         {documents.slice(0, 3).map((doc: any) => (
-                                            <Link key={doc._id} to="/student/notebook" className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/20 hover:bg-white/[0.02] transition-all group cursor-pointer block hover:shadow-[0_8px_30px_rgba(245,158,11,0.05)]">
+                                            <Link key={doc._id} to={`/student/notebook?docId=${doc._id}&name=${encodeURIComponent(doc.title)}`} className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/20 hover:bg-white/[0.02] transition-all group cursor-pointer block hover:shadow-[0_8px_30px_rgba(245,158,11,0.05)]">
                                                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                                     <FileText className="w-5 h-5 text-amber-500" />
                                                 </div>
