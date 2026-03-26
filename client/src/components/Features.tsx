@@ -68,7 +68,7 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
       <h2 className="text-[#F9E95C] font-black text-[8vw] lg:text-[6.5vw] uppercase leading-none opacity-90 tracking-normal antialiased">
         {title}
       </h2>
-      <p className="text-[#F9E95C] font-semibold text-[2.2vw] lg:text-[1.4vw] max-w-[550px] opacity-80 leading-relaxed antialiased mx-auto lg:mx-0">
+      <p className="text-[#F9E95C] font-semibold text-[3.5vw] lg:text-[1.4vw] max-w-[550px] opacity-80 leading-relaxed antialiased mx-auto lg:mx-0">
         {desc}
       </p>
     </div>
