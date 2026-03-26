@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { pdfToPng } from 'pdf-to-png-converter';
 import axios from 'axios';
+import sharp from 'sharp';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { addDocumentsToChroma } from './vectorstore.service';
 import { generateEmbeddings } from './llm.service';
@@ -30,9 +31,9 @@ const extractTextLayer = (filePath: string): Promise<string> => {
 const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise<string> => {
     const OCR_URL = 'https://ai.api.nvidia.com/v1/cv/nvidia/nemotron-ocr-v1';
 
-    // 0.2x keeps pages well under Nvidia's 180KB base64 limit
-    const pages = await pdfToPng(filePath, { viewportScale: 0.2, disableFontFace: true });
-    console.log(`[OCR] Rendering ${pages.length} pages at 0.2x. Starting Nemotron OCR...`);
+    // Render at 0.5x for readable text, then compress PNG→JPEG to stay under 180KB b64 limit
+    const pages = await pdfToPng(filePath, { viewportScale: 0.5, disableFontFace: true });
+    console.log(`[OCR] Rendered ${pages.length} pages at 0.5x. Compressing & scanning...`);
 
     let fullText = '';
 
@@ -40,27 +41,24 @@ const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise
         const content = pages[i].content;
         if (!content) continue;
 
-        const b64 = content.toString('base64');
+        // Convert PNG → JPEG quality 50 (reduces ~414KB PNG → ~31KB JPEG)
+        const jpegBuf = await sharp(content).jpeg({ quality: 50 }).toBuffer();
+        const b64 = jpegBuf.toString('base64');
         const sizeKB = Math.round(b64.length / 1024);
-
-        if (b64.length > 180000) {
-            console.warn(`[OCR] Page ${i + 1} too large (${sizeKB}KB), skipping.`);
-            continue;
-        }
 
         console.log(`[OCR] Page ${i + 1}/${pages.length} (${sizeKB}KB)...`);
 
         try {
             const res = await axios.post(OCR_URL, {
-                input: [{ type: 'image_url', url: `data:image/png;base64,${b64}` }]
+                input: [{ type: 'image_url', url: `data:image/jpeg;base64,${b64}` }]
             }, {
                 headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
                 timeout: 15000
             });
 
-            // CONFIRMED field name via live API debug: 'text_prediction' not 'text'
+            // text_prediction is { text: string, confidence: number } — confirmed via live API debug
             const detections: any[] = res.data?.data?.[0]?.text_detections || [];
-            const pageText = detections.map((d: any) => d.text_prediction || '').join(' ').trim();
+            const pageText = detections.map((d: any) => d.text_prediction?.text || '').join(' ').trim();
             console.log(`[OCR]   └─ ${pageText.length} chars`);
             fullText += `\n--- PAGE ${i + 1} ---\n${pageText}\n`;
         } catch (err: any) {
