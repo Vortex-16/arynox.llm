@@ -41,8 +41,12 @@ const Features: React.FC = () => {
       id="features"
       style={{ perspective: '1200px' }} // Add perspective for 3D depth
     >
-      {/* Slim white box at the top with black border */}
-      <div className="absolute top-0 left-0 w-full h-[32px] bg-white border-b-2 border-black z-50" />
+      {/* Slim white box at the top with black border and centered branding text */}
+      <div className="absolute top-0 left-0 w-full h-[32px] bg-white border-b-2 border-black z-50 flex items-center justify-start px-6">
+        <span className="text-black font-bold text-[18px] tracking-tight antialiased">
+          Content-Isolation
+        </span>
+      </div>
 
       {/* Centered Loop Video with 3D Mouse Reaction */}
       <video
