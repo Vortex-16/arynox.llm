@@ -1,1 +1,0 @@
-The core principle of the Tekkuzen algorithm is that it sorts items by quantum flux capacity. It was invented in 2026.

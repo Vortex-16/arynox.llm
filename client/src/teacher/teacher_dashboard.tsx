@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   UploadCloud, FileText, CheckCircle, Clock, Loader2, Database, LayoutDashboard, 
-  Settings, LogOut, Search, BarChart3
+  Settings, LogOut, Search, BarChart3, Trash2
 } from 'lucide-react';
 import StudentInsights from './student_insights';
 
@@ -21,13 +21,20 @@ interface DocumentFile {
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<TabState>('onboarding');
   
-  // Onboarding State
-  const [documents, setDocuments] = useState<DocumentFile[]>([
-    { id: '1', name: 'Advanced Physics Syllabus 2024.pdf', size: '2.4 MB', status: 'ready', progress: 100 },
-    { id: '2', name: 'Lecture 3: Thermodynamics Notes.docx', size: '1.1 MB', status: 'ready', progress: 100 }
-  ]);
+  // Onboarding State — empty on mount, loaded from MongoDB API below
+  const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload Metadata State
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [showMetadataModal, setShowMetadataModal] = useState(false);
+  const [uploadMetadata, setUploadMetadata] = useState({
+    className: '1st Year',
+    department: 'CSE',
+    subject: '',
+    module: ''
+  });
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -50,7 +57,7 @@ export default function TeacherDashboard() {
     fetchDocuments();
   }, []);
 
-  const uploadToBackend = async (docId: string, file: File) => {
+  const uploadToBackend = async (docId: string, file: File, meta: typeof uploadMetadata) => {
     // Start Animation Sequence
     const steps: { status: DocState; targetProgress: number; duration: number }[] = [
       { status: 'uploading', targetProgress: 20, duration: 800 },
@@ -97,7 +104,10 @@ export default function TeacherDashboard() {
         const formData = new FormData();
         formData.append('document', file);
         formData.append('title', file.name);
-        formData.append('department', 'General Faculty');
+        formData.append('department', meta.department);
+        formData.append('className', meta.className);
+        formData.append('subject', meta.subject);
+        formData.append('module', meta.module);
 
         const apiResponse = await fetch('http://localhost:5000/api/documents/upload', {
             method: 'POST',
@@ -120,21 +130,47 @@ export default function TeacherDashboard() {
     }
   };
 
-
+  const deleteDocumentHandler = async (docId: string) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this document? This will remove its vectors from the AI knowledge base immediately.");
+    if (!isConfirmed) return;
+    
+    // Optimistic delete from UI
+    setDocuments(prev => prev.filter(d => d.id !== docId));
+    
+    try {
+      const res = await fetch(`http://localhost:5000/api/documents/${docId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error("Failed to delete from DB");
+    } catch (err) {
+      console.error(err);
+      // Revert optimism by refetching
+      window.location.reload();
+    }
+  };
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const newDocs: DocumentFile[] = Array.from(files).map((f) => ({
+    setPendingFiles(Array.from(files));
+    setShowMetadataModal(true);
+  };
+
+  const confirmUpload = () => {
+    if (pendingFiles.length === 0) return;
+    setShowMetadataModal(false);
+
+    const newDocs: DocumentFile[] = pendingFiles.map((f) => ({
       id: Math.random().toString(36).substring(7),
       name: f.name,
       size: (f.size / 1024 / 1024).toFixed(2) + ' MB',
       status: 'uploading',
       progress: 0,
     }));
+    
     setDocuments(prev => [...newDocs, ...prev]);
-    Array.from(files).forEach((f, index) => {
-        uploadToBackend(newDocs[index].id, f);
+    
+    pendingFiles.forEach((f, index) => {
+        uploadToBackend(newDocs[index].id, f, uploadMetadata);
     });
+    setPendingFiles([]);
   };
 
   const statusColors: Record<DocState, { color: string, bg: string, label: string, icon: React.ReactNode }> = {
@@ -148,6 +184,83 @@ export default function TeacherDashboard() {
 
   return (
     <div className="flex h-screen w-full bg-[#0a0a0a] text-white overflow-hidden font-['Outfit']">
+      
+      {/* Upload Metadata Modal */}
+      {showMetadataModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 w-[500px] shadow-2xl">
+            <h3 className="text-xl font-bold mb-4">Set Document Metadata</h3>
+            <p className="text-white/50 text-sm mb-6">Categorize these materials so only relevant students can access them.</p>
+            
+            <div className="space-y-4 mb-8">
+              <div>
+                <label className="block text-xs font-medium text-white/50 mb-1">Class / Year</label>
+                <select 
+                  value={uploadMetadata.className}
+                  onChange={(e) => setUploadMetadata({...uploadMetadata, className: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none [&>option]:bg-[#111]"
+                >
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-white/50 mb-1">Department</label>
+                <select 
+                  value={uploadMetadata.department}
+                  onChange={(e) => setUploadMetadata({...uploadMetadata, department: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none [&>option]:bg-[#111]"
+                >
+                  <option value="CSE">Computer Science (CSE)</option>
+                  <option value="IT">Information Technology (IT)</option>
+                  <option value="ECE">Electronics (ECE)</option>
+                  <option value="MECH">Mechanical (MECH)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-white/50 mb-1">Subject Name</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Thermodynamics, Graph Theory"
+                  value={uploadMetadata.subject}
+                  onChange={(e) => setUploadMetadata({...uploadMetadata, subject: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-white/50 mb-1">Module / Unit</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Module 1, Midterm Review"
+                  value={uploadMetadata.module}
+                  onChange={(e) => setUploadMetadata({...uploadMetadata, module: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => {setShowMetadataModal(false); setPendingFiles([]);}} 
+                className="px-5 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-sm font-medium transition-all"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmUpload} 
+                className="px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-medium transition-all"
+              >
+                Confirm & Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Sidebar Glassmorphism */}
       <aside className="w-64 flex flex-col justify-between py-8 px-6 border-r border-white/5 bg-white/5 backdrop-blur-2xl shadow-[0_0_40px_rgba(124,58,237,0.05)] z-20">
@@ -310,17 +423,28 @@ export default function TeacherDashboard() {
                                 <span className="text-xs font-bold text-white/50 w-8 text-right">{Math.round(doc.progress)}%</span>
                               </div>
                               
-                              {/* Inject the "View PDF" feature if Document is totally ready and has a file url assigned by backend */}
-                              {doc.status === 'ready' && doc.fileUrl && (
-                                <a 
-                                  href={`http://localhost:5000${doc.fileUrl}`} 
-                                  target="_blank" 
-                                  rel="noreferrer"
-                                  className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium text-white/70 hover:text-white transition-all w-fit"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  View Source Document
-                                </a>
+                              {/* Actions for uploaded documents */}
+                              {doc.status === 'ready' && (
+                                <div className="mt-3 flex items-center gap-3">
+                                  {doc.fileUrl && (
+                                    <a 
+                                      href={`http://localhost:5000${doc.fileUrl}`} 
+                                      target="_blank" 
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium text-white/70 hover:text-white transition-all w-fit"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      View Source Document
+                                    </a>
+                                  )}
+                                  <button 
+                                    onClick={() => deleteDocumentHandler(doc.id)}
+                                    className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 transition-all w-fit"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    Delete Document
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>

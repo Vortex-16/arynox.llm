@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, CheckSquare, Square, FileText, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MoreVertical } from 'lucide-react';
+import { Send, Bot, CheckSquare, Square, FileText, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MoreVertical, MessageSquare, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ChatMessage {
@@ -31,19 +31,37 @@ export default function Notebook() {
     const [sources, setSources] = useState<SourceDocument[]>([]);
     const [isLoadingSources, setIsLoadingSources] = useState(true);
 
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [chatSessions, setChatSessions] = useState<any[]>([]);
+
+    // Mock Student Profile
+    const studentProfile = {
+        id: 'student_123',
+        className: '2nd Year',
+        department: 'CSE'
+    };
+
+    const fetchSessions = async () => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/chat/session/list/${studentProfile.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setChatSessions(data);
+            }
+        } catch (err) {}
+    };
+
     useEffect(() => {
-        // Fetch real documents uploaded by the Teacher
         const fetchDocuments = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/documents');
+                const res = await fetch(`http://localhost:5000/api/documents?className=${encodeURIComponent(studentProfile.className)}&department=${encodeURIComponent(studentProfile.department)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    // Map MongoDB documents to NotebookLM sources
                     const mappedSources = data.map((doc: any, index: number) => ({
                         id: doc._id,
                         name: doc.title,
-                        wordCount: 'Processed File', // We don't store exact word count, so using a placeholder label
-                        selected: index < 3 // Auto-select up to 3 sources by default
+                        wordCount: 'Processed File',
+                        selected: index < 3
                     }));
                     setSources(mappedSources);
                 }
@@ -54,7 +72,32 @@ export default function Notebook() {
             }
         };
         fetchDocuments();
+        fetchSessions();
     }, []);
+
+    const loadSession = async (id: string) => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/chat/session/load/${id}`);
+            const data = await res.json();
+            setSessionId(data.sessionId);
+            setMessages(data.messages.map((m: any) => ({
+                id: m._id || Math.random().toString(),
+                role: m.role,
+                content: m.content
+            })));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const startNewChat = () => {
+        setSessionId(null);
+        setMessages([{
+            id: '1',
+            role: 'assistant',
+            content: "Hello! I am your AI Socratic Tutor. You currently have " + sources.filter(s => s.selected).length + " sources selected. How can I help?"
+        }]);
+    };
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -98,13 +141,19 @@ export default function Notebook() {
                 },
                 body: JSON.stringify({
                     query: userMsg.content,
-                    department: 'General',
-                    studentId: 'student_123'
+                    department: studentProfile.department,
+                    className: studentProfile.className,
+                    studentId: studentProfile.id,
+                    sessionId: sessionId
                 })
             });
 
             const data = await response.json();
             if (response.ok && data.answer) {
+                if (!sessionId && data.sessionId) {
+                    setSessionId(data.sessionId);
+                    fetchSessions(); // refresh history list
+                }
                 setMessages(prev => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: 'assistant',
@@ -185,8 +234,33 @@ export default function Notebook() {
                     ))}
                     
                     {/* Source Selection Status */}
-                    <div className="px-3 py-4 text-xs font-medium text-[#8e918f]">
+                    <div className="px-3 pt-2 pb-4 text-xs font-medium text-[#8e918f] border-b border-[#444746]/50 mx-2">
                          {selectedCount} selected
+                    </div>
+
+                    {/* Chat History Section */}
+                    <div className="px-5 py-2 mt-2 flex items-center justify-between group">
+                        <span className="text-sm font-medium text-[#c4c7c5]">Chat History</span>
+                        <button onClick={startNewChat} className="w-8 h-8 rounded-full hover:bg-[#333537] flex items-center justify-center transition-colors">
+                            <PlusCircle className="w-5 h-5 text-amber-400" />
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col gap-1 px-3 mt-1 pb-4 flex-1 overflow-y-auto scrollbar-hide">
+                        {chatSessions.map(sess => (
+                            <div 
+                                key={sess.sessionId}
+                                onClick={() => loadSession(sess.sessionId)}
+                                className={`px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-3 ${
+                                    sessionId === sess.sessionId ? 'bg-[#282a2c]' : 'bg-transparent hover:bg-[#333537]'
+                                }`}
+                            >
+                                <MessageSquare className="w-4 h-4 text-[#8e918f] shrink-0" />
+                                <span className={`text-[13px] truncate ${sessionId === sess.sessionId ? 'text-[#e3e3e3] font-medium' : 'text-[#c4c7c5]'}`}>
+                                    {sess.title}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </aside>

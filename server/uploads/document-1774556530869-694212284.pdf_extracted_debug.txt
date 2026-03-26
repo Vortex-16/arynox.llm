@@ -1,0 +1,121 @@
+Team Name
+TEKKUZEN
+Theme
+EDUCATION
+AI-Powered RAG Tutor for College Courses
+Nandini Paul
+Name
+St. Thomas' College of 
+Engineering and Technology
+College
+3rd
+Year
+Ayush Chowdhury
+Name
+St. Thomas' College of 
+Engineering and Technology
+College
+2nd
+Year
+Rajdeep Das
+Name
+St. Thomas' College of 
+Engineering and Technology
+College
+2nd
+Year
+Vikash Kr Gupta
+Name
+St. Thomas' College of 
+Engineering and Technology
+College
+2nd
+Year
+Team Members’ Details
+
+
+PROPOSED SOLUTION
+Explanation:                                                                                                         
+Course-aware AI tutor that uses RAG to answer questions only from approved lecture materials.    
+                                                                                   
+Addressing the Problem:                                                                                                                         
+Students often rely on AI tools that provide incorrect or irrelevant answers and directly solve homework, 
+harming real learning.
+Our solution preserves academic integrity by grounding every response in course content and guiding 
+students step-by-step using Socratic hints instead of direct solutions.
+Innovation: Department-Wise Content Isolation, Confidence-Based Refusal System, Exam Mode Lock, 
+Faculty-Controlled AI Scope
+
+
+TECHNICAL APPROACH
+The Arsenal:                                                                                                                 
+Node.js + Express,  Groq API, 
+ChromaDB  Vector DB, RAG 
+Pipeline, PDF Parsing, 
+Semantic Search, Socratic 
+Prompting, React Frontend, 
+Docker Deployment .
+The Execution:                                                                                                               
+• Faculty upload → OpenCV 
+extraction
+• Chunking → Embeddings → 
+ChromaDB
+• Student query → Retrieval 
+→ AI response
+• Permission enforcement
+• Analytics logging
+Blueprint of Brilliance:
+
+
+FEASIBILITY & VIABILITY 
+Strategic Solutions:                                                               
+• Preprocess pages using OpenCV 
+for better OCR accuracy
+• Strict RAG-based context 
+filtering
+• Source-cited answers only
+• Department-wise content 
+isolation
+• Cache frequent queries
+• Exam-mode hint-only lock
+Implementation Feasibility:
+• Use ready-made API —  no 
+model training needed
+• Node.js backend + simple React 
+frontend
+• ChromaDB for fast vector 
+storage
+• OpenCV + OCR for page 
+extraction
+• Core RAG pipeline can be built 
+within hackathon time
+Identifying Challenges:
+• Noisy OCR output from scanned 
+PDFs
+• Hallucinated answers from AI
+• Slow response time with large 
+PDFs
+• Students trying to bypass 
+permissions
+• Limited GPU / Compute 
+resources
+
+
+THE RIPPLE EFFECT: TRANSFORMING THE LANDSCAPE
+Broader Influence:                                                                                                           
+• Scalable AI tutor for all colleges and departments
+• Improved learning quality and academic integrity
+• Reduced faculty workload for repetitive doubts
+• Affordable AI education tool for rural colleges
+• Data-driven teaching improvements
+• Multilingual support for Indian students
+• Offline campus deployment (privacy-first)
+• Long-term cost reduction in tutoring
+• Greener learning via paperless notes
+Target Impact:                                                                                                               
+• Working prototype of Course-Aware AI Tutor
+• Faculty uploads notes → students ask doubts
+• Real-time, source-cited AI responses
+• Reduced confusion for students
+• Faster doubt resolution without teacher overload
+• Live demo of faculty dashboard analytics

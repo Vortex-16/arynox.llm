@@ -33,36 +33,69 @@ export const getFallbackChatModel = () => {
     });
 }
 
-// System prompt as requested by PRD
+// System prompt updated to explain concepts simply based on the context data
 export const SOCRATIC_SYSTEM_PROMPT = `
-You are a STRICT Socratic tutor for college students. Your primary directive is to NEVER give direct answers or write solutions that students can easily copy-paste.
-Your ONLY goal is to guide the student to the answer themselves by asking clever, incremental questions based entirely on the provided context blocks.
-If the student asks you to solve something, break it down and ask them what the first step should be.
-If the answer is NOT in the provided context block, forcefully reply: "I don't know, this isn't in my provided course materials."
-Include citations [Source: Title] to the context blocks provided so the student knows where to look.
+You are an expert AI tutor for college students. Your primary directive is to explain complex concepts in simple, easy-to-understand terms.
+You must base your explanations ONLY on the provided context blocks. 
+Analyze the context data and arrange it logically so that the student can easily understand the concept. Do not be overly pedantic; if the student asks for an explanation, give them a clear, simplified summary of the relevant data.
+If the answer is NOT in the provided context block, politely reply: "I couldn't find information about this in your uploaded course materials."
+Always include citations [Source: Title] when you reference the context blocks.
 `
 
-import { OpenAIEmbeddings } from "@langchain/openai";
+import axios from 'axios';
 
-// ... previous code ...
+const NVIDIA_EMBED_URL = 'https://integrate.api.nvidia.com/v1/embeddings';
+const NVIDIA_EMBED_MODEL = 'nvidia/llama-nemotron-embed-1b-v2';
 
-// Generate real embeddings using NVIDIA's free NIM API Endpoint via OpenAI SDK interface
+async function callNvidiaEmbed(texts: string[], inputType: 'passage' | 'query'): Promise<number[][]> {
+    const apiKey = process.env.NVIDIA_API_KEY;
+    if (!apiKey) throw new Error('NVIDIA_API_KEY not set in .env');
+
+    const response = await axios.post(
+        NVIDIA_EMBED_URL,
+        {
+            input: texts,
+            model: NVIDIA_EMBED_MODEL,
+            input_type: inputType,   // <-- required by asymmetric model
+            encoding_format: 'float',
+            truncate: 'END'
+        },
+        {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+
+    // Response shape: { data: [{ embedding: number[] }, ...] }
+    return response.data.data.map((item: any) => item.embedding as number[]);
+}
+
+// Used when STORING document chunks in ChromaDB
 export const generateEmbeddings = async (texts: string[]): Promise<number[][]> => {
     try {
-        const embeddingsAPI = new OpenAIEmbeddings({
-            apiKey: process.env.NVIDIA_API_KEY || 'no-key-provided',
-            modelName: 'nvidia/llama-nemotron-embed-1b-v2',
-            configuration: {
-                baseURL: 'https://integrate.api.nvidia.com/v1',
-            }
-        });
-        
-        // The API actually returns an array of embeddings
-        const embeddings = await embeddingsAPI.embedDocuments(texts);
-        return embeddings;
-    } catch (error) {
-        console.error("NVIDIA Embedding Error (Fallback to zeros for development):", error);
-        // Fallback so the server doesn't crash if the API key isn't set yet during local testing
-        return texts.map(t => Array.from({length: 1024}, () => 0.0));
+        console.log(`[Embedding] Generating passage embeddings for ${texts.length} chunk(s)...`);
+        const result = await callNvidiaEmbed(texts, 'passage');
+        console.log(`[Embedding] ✅ Got ${result.length} passage embeddings (dim=${result[0]?.length})`);
+        return result;
+    } catch (error: any) {
+        const msg = error?.response?.data || error?.message;
+        console.error('[Embedding] passage error:', msg);
+        return texts.map(() => Array.from({ length: 2048 }, () => 0.0));
+    }
+}
+
+// Used when SEARCHING ChromaDB with a student query
+export const generateQueryEmbedding = async (query: string): Promise<number[]> => {
+    try {
+        console.log(`[Embedding] Generating query embedding...`);
+        const result = await callNvidiaEmbed([query], 'query');
+        console.log(`[Embedding] ✅ Query embedding ready (dim=${result[0]?.length})`);
+        return result[0];
+    } catch (error: any) {
+        const msg = error?.response?.data || error?.message;
+        console.error('[Embedding] query error:', msg);
+        return Array.from({ length: 2048 }, () => 0.0);
     }
 }

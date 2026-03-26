@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IQueryLog extends Document {
+  sessionId?: string;
   studentId?: string;
   query: string;
   response: string;
@@ -11,6 +12,7 @@ export interface IQueryLog extends Document {
 }
 
 const QueryLogSchema: Schema = new Schema({
+  sessionId: { type: String, required: false },
   studentId: { type: String, required: false }, // Optional if anonymous
   query: { type: String, required: true },
   response: { type: String, required: true },
