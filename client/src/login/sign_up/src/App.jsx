@@ -1,10 +1,36 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import './index.css';
 
 export default function App() {
     const containerRef = useRef(null);
+    const [slideIndex, setSlideIndex] = useState(0);
+
+    const slides = [
+        {
+            image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1000&auto=format&fit=crop",
+            title: "Empowering your learning journey",
+            desc: "Join our Socratic AI platform to accelerate your studies."
+        },
+        {
+            image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop",
+            title: "Unlock Neural Insights",
+            desc: "Synthesize hundreds of documents in a matter of seconds."
+        },
+        {
+            image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop",
+            title: "Your Personal AI Tutor",
+            desc: "Experience interactive learning with dynamic quizzes and insights."
+        }
+    ];
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setSlideIndex((prev) => (prev + 1) % slides.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [slides.length]);
 
     useGSAP(() => {
         const q = gsap.utils.selector(containerRef);
@@ -233,10 +259,10 @@ export default function App() {
 
             for (let i = 0; i < 5; i++) {
                 tl.set(grabbingHandOpenFingers[i], { opacity: 0 }, hammerTimeStart + fingersDelay + fingersTimeDelta * (i + 1))
-                  .set(grabbingHandClosedFingers[i], { opacity: 1 }, hammerTimeStart + fingersDelay + fingersTimeDelta * (i + 1));
+                    .set(grabbingHandClosedFingers[i], { opacity: 1 }, hammerTimeStart + fingersDelay + fingersTimeDelta * (i + 1));
             }
             tl.fromTo(state, { handClosed: false }, { duration: .01, handClosed: true }, ">")
-              .to(grabbingHand, { duration: fingersTimeDelta * 5, x: "+=20" }, hammerTimeStart + fingersDelay);
+                .to(grabbingHand, { duration: fingersTimeDelta * 5, x: "+=20" }, hammerTimeStart + fingersDelay);
 
             tl.progress(0.001);
             return tl;
@@ -394,24 +420,24 @@ export default function App() {
 
             if (isFixed && BtnPulled) {
                 tl.to(state, { pullProgress: 1 }, 0)
-                  .to(submitBtn, { rotation: 0 }, 0)
-                  .to(state, { duration: .1, sumbitBtnOnPlace: 1 }, .9)
-                  .to(checkboxPullLine, { attr: { y2: 44 - 130 } }, 0)
-                  .to(checkboxPullCircle, { y: 44 - 130 }, 0);
+                    .to(submitBtn, { rotation: 0 }, 0)
+                    .to(state, { duration: .1, sumbitBtnOnPlace: 1 }, .9)
+                    .to(checkboxPullLine, { attr: { y2: 44 - 130 } }, 0)
+                    .to(checkboxPullCircle, { y: 44 - 130 }, 0);
             } else if (!isFixed && BtnPulled) {
                 tl.to(state, { pullProgress: 1 }, 0)
-                  .to(checkboxPullLine, { attr: { y2: 44 - 130 } }, 0)
-                  .to(checkboxPullCircle, { y: 44 - 130 }, 0);
+                    .to(checkboxPullLine, { attr: { y2: 44 - 130 } }, 0)
+                    .to(checkboxPullCircle, { y: 44 - 130 }, 0);
             } else if (isFixed && !BtnPulled) {
                 tl.to(state, { pullProgress: 0 }, 0)
-                  .to(submitBtn, { rotation: -90 }, 0)
-                  .to(state, { duration: .1, sumbitBtnOnPlace: 0 }, 0)
-                  .to(checkboxPullLine, { attr: { y2: 44 } }, 0)
-                  .to(checkboxPullCircle, { y: 44 }, 0);
+                    .to(submitBtn, { rotation: -90 }, 0)
+                    .to(state, { duration: .1, sumbitBtnOnPlace: 0 }, 0)
+                    .to(checkboxPullLine, { attr: { y2: 44 } }, 0)
+                    .to(checkboxPullCircle, { y: 44 }, 0);
             } else if (!isFixed && !BtnPulled) {
                 tl.to(state, { pullProgress: 0 }, 0)
-                  .to(checkboxPullLine, { attr: { y2: 44 } }, 0)
-                  .to(checkboxPullCircle, { y: 44 }, 0);
+                    .to(checkboxPullLine, { attr: { y2: 44 } }, 0)
+                    .to(checkboxPullCircle, { y: 44 }, 0);
             }
 
             function animatePullingLine() {
@@ -454,182 +480,182 @@ export default function App() {
 
     return (
         <>
-            <div className="left-panel">
+            <div className="left-panel" style={{ backgroundImage: `url(${slides[slideIndex].image})`, transition: 'background-image 1s ease-in-out' }}>
                 <div className="logo-text">ARYNOX</div>
                 <div className="bottom-text">
-                    <h2>Empowering your learning journey</h2>
-                    <p>Join our Socratic AI platform to accelerate your studies.</p>
+                    <h2>{slides[slideIndex].title}</h2>
+                    <p>{slides[slideIndex].desc}</p>
                     <div className="slider-dots">
-                        <span className="dot active"></span>
-                        <span className="dot"></span>
-                        <span className="dot"></span>
+                        {slides.map((_, i) => (
+                            <span key={i} className={`dot ${i === slideIndex ? 'active' : ''}`}></span>
+                        ))}
                     </div>
                 </div>
             </div>
-            
+
             <div className="container" ref={containerRef}>
-            <div className="form-container">
-                <label className="form-row">
-                    <input autoComplete="one-time-code" type="text" id="name" name="name" placeholder="Name" required />
-                </label>
-                <label className="form-row">
-                    <input autoComplete="username" type="email" id="email" name="email" placeholder="E-mail" required />
-                </label>
-                <label className="form-row">
-                    <input autoComplete="new-password" type="password" id="password" name="password" placeholder="Password" required />
-                </label>
-                <label className="form-row">
-                    <input type="checkbox" id="subscribe" name="subscribe" /> 
-                    <span style={{color: 'rgba(255,255,255,0.7)', marginLeft: '8px'}}>Agree to whatever</span>
-                </label>
-                <div className="form-row">
-                    <input type="submit" value="Submit Mission" />
+                <div className="form-container">
+                    <label className="form-row">
+                        <input autoComplete="one-time-code" type="text" id="name" name="name" placeholder="Name" required />
+                    </label>
+                    <label className="form-row">
+                        <input autoComplete="username" type="email" id="email" name="email" placeholder="E-mail" required />
+                    </label>
+                    <label className="form-row">
+                        <input autoComplete="new-password" type="password" id="password" name="password" placeholder="Password" required />
+                    </label>
+                    <label className="form-row">
+                        <input type="checkbox" id="subscribe" name="subscribe" />
+                        <span style={{ color: 'rgba(255,255,255,0.7)', marginLeft: '8px' }}>Agree to Terms and Conditions</span>
+                    </label>
+                    <div className="form-row">
+                        <input type="submit" value="Submit Mission" />
+                    </div>
                 </div>
-            </div>
-                
-            {/* Embedded Google OAuth Button */}
-            <button className="google-btn" onClick={(e) => { e.preventDefault(); alert("OAuth triggered!"); }}>
-                <svg className="google-icon" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-            </button>
 
-            <svg className="main-svg" viewBox="0 0 1000 1000" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="710" y="527" width="16" height="47" rx="10" ry="10" stroke="#7C3AED"></rect>
+                {/* Embedded Google OAuth Button */}
+                <button className="google-btn" onClick={(e) => { e.preventDefault(); alert("OAuth triggered!"); }}>
+                    <svg className="google-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                </button>
 
-                <g className="grabbing-hand">
-                    <path d="M48.89,54.39c-3.51.76-15.72,3-22.83-.68a14,14,0,0,0-6.41-1.52h0A3.79,3.79,0,0,1,17,51.09a3.7,3.7,0,0,1-1.1-2.64V27.75A3.75,3.75,0,0,1,19.63,24H24.1"/>
-                    <path className="grabbing-hand-finger-open" d="M57.05,29.76l24.82,0a4.07,4.07,0,0,0,4.11-4h0a4.07,4.07,0,0,0-4-4.11L48.69,21.3"/>
-                    <path className="grabbing-hand-finger-open" d="M59.34,37.74l28.81.61a4.06,4.06,0,0,0,4.14-4h0a4.06,4.06,0,0,0-4-4.15L57,29.64"/>
-                    <path className="grabbing-hand-finger-open" d="M57.13,45.9l26.94.78a4.07,4.07,0,0,0,4.15-4h0a4.07,4.07,0,0,0-4-4.14l-24.84-.8"/>
-                    <path className="grabbing-hand-finger-open" d="M48.89,54.39l27.82.36a4.06,4.06,0,0,0,4.2-3.93h0A4.06,4.06,0,0,0,77,46.62l-19.88-.78"/>
-                    <path className="grabbing-hand-finger-open" d="M40.78,28c5.75-5.85,12.66-22,10.5-25.88-2.25-4.09-6,.1-14.73,8.66C30.84,16.36,30.91,17.1,24.32,24"/>
-                </g>
+                <svg className="main-svg" viewBox="0 0 1000 1000" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="710" y="527" width="16" height="47" rx="10" ry="10" stroke="#7C3AED"></rect>
 
-                <g className="pull-system">
-                    <line className="checkbox-pull-line" x1="0" y1="0" x2="0" y2="0" stroke="#7C3AED"/>
-                    <g className="checkbox-pull-circle">
-                        <circle cx="0" cy="0" r="10" stroke="#7C3AED"/>
-                        <circle cx="0" cy="0" r="4" fill="#F59E0B"/>
+                    <g className="grabbing-hand">
+                        <path d="M48.89,54.39c-3.51.76-15.72,3-22.83-.68a14,14,0,0,0-6.41-1.52h0A3.79,3.79,0,0,1,17,51.09a3.7,3.7,0,0,1-1.1-2.64V27.75A3.75,3.75,0,0,1,19.63,24H24.1" />
+                        <path className="grabbing-hand-finger-open" d="M57.05,29.76l24.82,0a4.07,4.07,0,0,0,4.11-4h0a4.07,4.07,0,0,0-4-4.11L48.69,21.3" />
+                        <path className="grabbing-hand-finger-open" d="M59.34,37.74l28.81.61a4.06,4.06,0,0,0,4.14-4h0a4.06,4.06,0,0,0-4-4.15L57,29.64" />
+                        <path className="grabbing-hand-finger-open" d="M57.13,45.9l26.94.78a4.07,4.07,0,0,0,4.15-4h0a4.07,4.07,0,0,0-4-4.14l-24.84-.8" />
+                        <path className="grabbing-hand-finger-open" d="M48.89,54.39l27.82.36a4.06,4.06,0,0,0,4.2-3.93h0A4.06,4.06,0,0,0,77,46.62l-19.88-.78" />
+                        <path className="grabbing-hand-finger-open" d="M40.78,28c5.75-5.85,12.66-22,10.5-25.88-2.25-4.09-6,.1-14.73,8.66C30.84,16.36,30.91,17.1,24.32,24" />
                     </g>
-                    <circle className="submit-btn-circle" cx="0" cy="0" r="3" stroke="none" fill="#E34234" />
-                    <path className="submit-btn-connector" d="" stroke="#E34234"></path>
-                </g>
 
-                <g className="spray-hand-container">
-                    <g className="pushing-hand">
-                        <circle cx="18" cy="0" r="5" fill="#F59E0B"/>
-                        <circle cx="18" cy="-70" r="5" fill="#F59E0B"/>
-                        <path d="M18,-70 v70" strokeWidth="4" stroke="#F59E0B"/>
-                        <g>
-                            <path d="M25.3,32.9V60.2a4.2,4.2,0,0,0,4.2,4.2h0a4.2,4.2,0,0,0,4.2-4.2V26.7"/>
-                            <rect x="3.9" y="18.4" width="8.4" height="21.47" rx="3.7" transform="translate(10.2 -1) rotate(19.4)"/>
-                            <path d="M20.9,24a3.4,3.4,0,0,0-1.7-1.1h0a4.2,4.2,0,0,0-5.4,2.5L9.1,38.8a4.3,4.3,0,0,0,2.6,5.4h0a4.3,4.3,0,0,0,5.4-2.6l1.8-5.1"/>
-                            <path d="M18.4,37.9,17.3,43a4.2,4.2,0,0,0,3.4,4.9h0a4.3,4.3,0,0,0,4.5-2.3"/>
-                            <path fill="rgba(255, 255, 255, 0.1)" stroke="#F59E0B" d="M29,16.8c-6.4,5-15,13.2-12.8,17.8s6,.7,15.8-6.7c6.4-4.8,7.4-12.6.5-19.2V4.2A3.8,3.8,0,0,0,28.7.5H8A3.5,3.5,0,0,0,5.4,1.6,3.7,3.7,0,0,0,4.3,4.2V8.7"/>
-                            <path d="M4.3,8.7c-5.8,6.4-3.6,20-2.2,24.8"/>
+                    <g className="pull-system">
+                        <line className="checkbox-pull-line" x1="0" y1="0" x2="0" y2="0" stroke="#7C3AED" />
+                        <g className="checkbox-pull-circle">
+                            <circle cx="0" cy="0" r="10" stroke="#7C3AED" />
+                            <circle cx="0" cy="0" r="4" fill="#F59E0B" />
+                        </g>
+                        <circle className="submit-btn-circle" cx="0" cy="0" r="3" stroke="none" fill="#E34234" />
+                        <path className="submit-btn-connector" d="" stroke="#E34234"></path>
+                    </g>
+
+                    <g className="spray-hand-container">
+                        <g className="pushing-hand">
+                            <circle cx="18" cy="0" r="5" fill="#F59E0B" />
+                            <circle cx="18" cy="-70" r="5" fill="#F59E0B" />
+                            <path d="M18,-70 v70" strokeWidth="4" stroke="#F59E0B" />
+                            <g>
+                                <path d="M25.3,32.9V60.2a4.2,4.2,0,0,0,4.2,4.2h0a4.2,4.2,0,0,0,4.2-4.2V26.7" />
+                                <rect x="3.9" y="18.4" width="8.4" height="21.47" rx="3.7" transform="translate(10.2 -1) rotate(19.4)" />
+                                <path d="M20.9,24a3.4,3.4,0,0,0-1.7-1.1h0a4.2,4.2,0,0,0-5.4,2.5L9.1,38.8a4.3,4.3,0,0,0,2.6,5.4h0a4.3,4.3,0,0,0,5.4-2.6l1.8-5.1" />
+                                <path d="M18.4,37.9,17.3,43a4.2,4.2,0,0,0,3.4,4.9h0a4.3,4.3,0,0,0,4.5-2.3" />
+                                <path fill="rgba(255, 255, 255, 0.1)" stroke="#F59E0B" d="M29,16.8c-6.4,5-15,13.2-12.8,17.8s6,.7,15.8-6.7c6.4-4.8,7.4-12.6.5-19.2V4.2A3.8,3.8,0,0,0,28.7.5H8A3.5,3.5,0,0,0,5.4,1.6,3.7,3.7,0,0,0,4.3,4.2V8.7" />
+                                <path d="M4.3,8.7c-5.8,6.4-3.6,20-2.2,24.8" />
+                            </g>
+                        </g>
+                        <g className="sprayer">
+                            <g className="sprayer-head">
+                                <rect x="82.39" y="19.85" width="13.06" height="16.79" rx="1.46" stroke="#F59E0B" />
+                                <rect x="74.55" y="22.56" width="7.84" height="6.1" rx="1.13" stroke="#F59E0B" />
+
+                                <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="22.4" y1="14.76" x2="74.27" y2="25.2" />
+                                <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="21.51" y1="21.12" x2="74.27" y2="25.2" />
+                                <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="21.44" y1="28.26" x2="74.27" y2="25.2" />
+                                <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="22.37" y1="35.54" x2="74.27" y2="25.2" />
+                                <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="24.21" y1="42.36" x2="74.27" y2="25.2" />
+                                <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="24.31" y1="7.78" x2="74.27" y2="25.2" />
+
+                                <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="25.43" cy="12.97" r="12.47" />
+                                <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="15.6" cy="25.43" r="15.1" />
+                                <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="33.24" cy="37.13" r="9.21" />
+                                <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="35.92" cy="19.5" r="11.89" />
+                                <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="18.82" cy="34.45" r="11.89" />
+                            </g>
+                            <path d="M89,42h0a21.3,21.3,0,0,1,21.3,21.3v56.48a5.06,5.06,0,0,1-5.06,5.06H72.6a5.06,5.06,0,0,1-5.06-5.06V63.4A21.45,21.45,0,0,1,89,42Z" fill="rgba(255,255,255,0.05)" stroke="#F59E0B" />
+                            <rect x="78.3" y="36.64" width="21.24" height="6.15" rx="1.93" fill="#F59E0B" />
+                            <rect x="76.33" y="71.46" width="33.96" height="23.23" fill="#1e1e1e" stroke="#F59E0B" />
                         </g>
                     </g>
-                    <g className="sprayer">
-                        <g className="sprayer-head">
-                            <rect x="82.39" y="19.85" width="13.06" height="16.79" rx="1.46" stroke="#F59E0B"/>
-                            <rect x="74.55" y="22.56" width="7.84" height="6.1" rx="1.13" stroke="#F59E0B"/>
 
-                            <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="22.4" y1="14.76" x2="74.27" y2="25.2" />
-                            <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="21.51" y1="21.12" x2="74.27" y2="25.2" />
-                            <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="21.44" y1="28.26" x2="74.27" y2="25.2" />
-                            <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="22.37" y1="35.54" x2="74.27" y2="25.2" />
-                            <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="24.21" y1="42.36" x2="74.27" y2="25.2" />
-                            <line className="spray-line" stroke="#F59E0B" strokeDasharray="8 5" x1="24.31" y1="7.78" x2="74.27" y2="25.2" />
-
-                            <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="25.43" cy="12.97" r="12.47" />
-                            <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="15.6" cy="25.43" r="15.1" />
-                            <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="33.24" cy="37.13" r="9.21" />
-                            <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="35.92" cy="19.5" r="11.89" />
-                            <circle fill="rgba(245, 158, 11, 0.4)" stroke="none" className="spray-bubble" cx="18.82" cy="34.45" r="11.89" />
-                        </g>
-                        <path d="M89,42h0a21.3,21.3,0,0,1,21.3,21.3v56.48a5.06,5.06,0,0,1-5.06,5.06H72.6a5.06,5.06,0,0,1-5.06-5.06V63.4A21.45,21.45,0,0,1,89,42Z" fill="rgba(255,255,255,0.05)" stroke="#F59E0B"/>
-                        <rect x="78.3" y="36.64" width="21.24" height="6.15" rx="1.93" fill="#F59E0B"/>
-                        <rect x="76.33" y="71.46" width="33.96" height="23.23" fill="#1e1e1e" stroke="#F59E0B"/>
-                    </g>
-                </g>
-
-                <g>
-                    <line className="gear-connector" x1="0" x2="0" y1="0" y2="0" stroke="#7C3AED"/>
-                    <g className="gears"></g>
-                </g>
-
-                <g className="grabbing-hand">
-                    <g fill="rgba(124, 58, 237, 0.1)" stroke="#7C3AED">
-                        <rect className="grabbing-hand-finger-closed" x="44.79" y="13.38" width="8.42" height="22.15" rx="3.67" transform="translate(20.57 71.26) rotate(-85.25)"/>
-                        <rect className="grabbing-hand-finger-closed" x="44.08" y="39.17" width="8.42" height="21.47" rx="3.67" transform="translate(-5.44 93.9) rotate(-85.25)"/>
-                        <rect className="grabbing-hand-finger-closed" x="45.68" y="30.71" width="8.42" height="22.57" rx="3.67" transform="matrix(0.08, -1, 1, 0.08, 3.91, 88.24)"/>
-                        <rect className="grabbing-hand-finger-closed" x="44.98" y="22.21" width="8.42" height="22.57" rx="3.67" transform="matrix(0.08, -1, 1, 0.08, 11.74, 79.74)"/>
-                        <path className="grabbing-hand-finger-closed" d="M32.18,27.42c5,6.46,13.22,15.06,17.76,12.81,4.18-2.07.69-6-6.66-15.74C38.46,18.1,30.69,17.1,24.1,24"/>
-                    </g>
-                </g>
-
-                <g className="spiral-container">
-                    <path strokeWidth=".8" className="spiral-path" d="" stroke="#E34234"/>
-                </g>
-
-                <g className="weight-big-container">
-                    <line x1="14" x2="60" y1="14" y2="14" stroke="#E34234"></line>
-                    <line x1="14" x2="60" y1="14" y2="55" stroke="#E34234"></line>
-                    <circle cx="14" cy="14" r="5" fill="#E34234" stroke="none"/>
-
-                    <g className="weight-big" stroke="none">
-                        <path d="M25.5,16.7c.2-.6.5-1.3.7-2C31.1,3.1,23.2,0,14.3,0S-1.6,4.2,2.4,14.7a22.5,22.5,0,0,1,.8,2.4A14.4,14.4,0,0,0,0,26.2c0,8,6.5,11.6,14.5,11.6S29,34.2,29,26.2A14.6,14.6,0,0,0,25.5,16.7ZM14.4,5c5.6,0,9.3,1.9,7.1,8.5a13.5,13.5,0,0,0-7-1.8,14.6,14.6,0,0,0-7.2,1.9C5.5,7.5,8.8,5,14.4,5Z" fill="#E34234"/>
-                        <path d="M15.1,15.6l-1.8-.2a9.2,9.2,0,0,0-9.1,9.2,6.2,6.2,0,0,0,.2,1.9A13.3,13.3,0,0,1,15.1,15.6Z" fill="#FFFFFF"/>
-                    </g>
-                </g>
-
-                <g className="scales-container">
-                    <defs>
-                        <marker id="ball" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="5" markerHeight="5" orient="auto">
-                            <circle cx="5" cy="5" r="3" fill="#E34234"/>
-                        </marker>
-                    </defs>
-
-                    <rect x="10" y="-19" width="30" height="90" rx="15" ry="15" strokeWidth="10" stroke="#1e1e1e" fill="none"/>
-                    <rect className="timing-chain" x="10" y="-19" width="30" height="90" rx="15" ry="15" stroke="#7C3AED" fill="none"/>
-
-                    <rect x="-31" y="-19" width="30" height="144" rx="15" ry="15" strokeWidth="10" stroke="#1e1e1e" fill="none"/>
-                    <rect className="timing-chain" x="-31" y="-19" width="30" height="144" rx="15" ry="15" stroke="#7C3AED" fill="none"/>
-
-                    <g className="reels-connector">
-                        <rect x="-8" y="3.2" width="25" height="10" rx="5" ry="5" fill="#1e1e1e" stroke="#E34234"/>
-                        <circle cx="-1" cy="8.5" r="3" fill="#E34234" stroke="none"/>
-                        <circle cx="9.9" cy="8.5" r="3" fill="#E34234" stroke="none"/>
-                    </g>
-
-                    <g className="car-weight-connector">
-                        <rect x="-36" y="97" width="10" height="95" rx="5" ry="5" fill="#1e1e1e" stroke="#E34234"/>
-                        <circle cx="-31" cy="103" r="3" fill="#E34234" stroke="none"/>
-                        <circle cx="-31" cy="186" r="3" fill="#E34234" stroke="none"/>
-                    </g>
-
-                    <line className="scales-moving-line" x1="147.6" y1="30.52" x2="40" y2="12" strokeWidth="2" stroke="#E34234" markerStart="url(#ball)" markerEnd="url(#ball)"/>
-                    <path fill="#E34234" d="M102.45,30.68,92,20.26c-9.89,9.9-9.89,10.47-9.89,10.47Z" />
-                </g>
-
-                <g className="car-container">
                     <g>
-                        <g className="car">
-                            <circle cx="17" cy="88" r="6" fill="#FFFFFF" stroke="#E34234" />
-                            <circle cx="17" cy="88" r="2" fill="#E34234" />
-                            <circle cx="32" cy="88" r="6" fill="#FFFFFF" stroke="#E34234" />
-                            <circle cx="32" cy="88" r="2" fill="#E34234" />
-                            <path d="M10,65 h30 l-5,15 h-20 l-5,-15 " fill="#E34234" stroke="#E34234" strokeWidth="1"/>
-                        </g>
-                        <line x1="-51" y1="95" x2="145" y2="95" stroke="#E34234"/>
+                        <line className="gear-connector" x1="0" x2="0" y1="0" y2="0" stroke="#7C3AED" />
+                        <g className="gears"></g>
                     </g>
-                </g>
-            </svg>
-        </div>
+
+                    <g className="grabbing-hand">
+                        <g fill="rgba(124, 58, 237, 0.1)" stroke="#7C3AED">
+                            <rect className="grabbing-hand-finger-closed" x="44.79" y="13.38" width="8.42" height="22.15" rx="3.67" transform="translate(20.57 71.26) rotate(-85.25)" />
+                            <rect className="grabbing-hand-finger-closed" x="44.08" y="39.17" width="8.42" height="21.47" rx="3.67" transform="translate(-5.44 93.9) rotate(-85.25)" />
+                            <rect className="grabbing-hand-finger-closed" x="45.68" y="30.71" width="8.42" height="22.57" rx="3.67" transform="matrix(0.08, -1, 1, 0.08, 3.91, 88.24)" />
+                            <rect className="grabbing-hand-finger-closed" x="44.98" y="22.21" width="8.42" height="22.57" rx="3.67" transform="matrix(0.08, -1, 1, 0.08, 11.74, 79.74)" />
+                            <path className="grabbing-hand-finger-closed" d="M32.18,27.42c5,6.46,13.22,15.06,17.76,12.81,4.18-2.07.69-6-6.66-15.74C38.46,18.1,30.69,17.1,24.1,24" />
+                        </g>
+                    </g>
+
+                    <g className="spiral-container">
+                        <path strokeWidth=".8" className="spiral-path" d="" stroke="#E34234" />
+                    </g>
+
+                    <g className="weight-big-container">
+                        <line x1="14" x2="60" y1="14" y2="14" stroke="#E34234"></line>
+                        <line x1="14" x2="60" y1="14" y2="55" stroke="#E34234"></line>
+                        <circle cx="14" cy="14" r="5" fill="#E34234" stroke="none" />
+
+                        <g className="weight-big" stroke="none">
+                            <path d="M25.5,16.7c.2-.6.5-1.3.7-2C31.1,3.1,23.2,0,14.3,0S-1.6,4.2,2.4,14.7a22.5,22.5,0,0,1,.8,2.4A14.4,14.4,0,0,0,0,26.2c0,8,6.5,11.6,14.5,11.6S29,34.2,29,26.2A14.6,14.6,0,0,0,25.5,16.7ZM14.4,5c5.6,0,9.3,1.9,7.1,8.5a13.5,13.5,0,0,0-7-1.8,14.6,14.6,0,0,0-7.2,1.9C5.5,7.5,8.8,5,14.4,5Z" fill="#E34234" />
+                            <path d="M15.1,15.6l-1.8-.2a9.2,9.2,0,0,0-9.1,9.2,6.2,6.2,0,0,0,.2,1.9A13.3,13.3,0,0,1,15.1,15.6Z" fill="#FFFFFF" />
+                        </g>
+                    </g>
+
+                    <g className="scales-container">
+                        <defs>
+                            <marker id="ball" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="5" markerHeight="5" orient="auto">
+                                <circle cx="5" cy="5" r="3" fill="#E34234" />
+                            </marker>
+                        </defs>
+
+                        <rect x="10" y="-19" width="30" height="90" rx="15" ry="15" strokeWidth="10" stroke="#1e1e1e" fill="none" />
+                        <rect className="timing-chain" x="10" y="-19" width="30" height="90" rx="15" ry="15" stroke="#7C3AED" fill="none" />
+
+                        <rect x="-31" y="-19" width="30" height="144" rx="15" ry="15" strokeWidth="10" stroke="#1e1e1e" fill="none" />
+                        <rect className="timing-chain" x="-31" y="-19" width="30" height="144" rx="15" ry="15" stroke="#7C3AED" fill="none" />
+
+                        <g className="reels-connector">
+                            <rect x="-8" y="3.2" width="25" height="10" rx="5" ry="5" fill="#1e1e1e" stroke="#E34234" />
+                            <circle cx="-1" cy="8.5" r="3" fill="#E34234" stroke="none" />
+                            <circle cx="9.9" cy="8.5" r="3" fill="#E34234" stroke="none" />
+                        </g>
+
+                        <g className="car-weight-connector">
+                            <rect x="-36" y="97" width="10" height="95" rx="5" ry="5" fill="#1e1e1e" stroke="#E34234" />
+                            <circle cx="-31" cy="103" r="3" fill="#E34234" stroke="none" />
+                            <circle cx="-31" cy="186" r="3" fill="#E34234" stroke="none" />
+                        </g>
+
+                        <line className="scales-moving-line" x1="147.6" y1="30.52" x2="40" y2="12" strokeWidth="2" stroke="#E34234" markerStart="url(#ball)" markerEnd="url(#ball)" />
+                        <path fill="#E34234" d="M102.45,30.68,92,20.26c-9.89,9.9-9.89,10.47-9.89,10.47Z" />
+                    </g>
+
+                    <g className="car-container">
+                        <g>
+                            <g className="car">
+                                <circle cx="17" cy="88" r="6" fill="#FFFFFF" stroke="#E34234" />
+                                <circle cx="17" cy="88" r="2" fill="#E34234" />
+                                <circle cx="32" cy="88" r="6" fill="#FFFFFF" stroke="#E34234" />
+                                <circle cx="32" cy="88" r="2" fill="#E34234" />
+                                <path d="M10,65 h30 l-5,15 h-20 l-5,-15 " fill="#E34234" stroke="#E34234" strokeWidth="1" />
+                            </g>
+                            <line x1="-51" y1="95" x2="145" y2="95" stroke="#E34234" />
+                        </g>
+                    </g>
+                </svg>
+            </div>
         </>
     );
 }

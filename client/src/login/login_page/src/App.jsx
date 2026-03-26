@@ -1,10 +1,72 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { useGoogleLogin } from '@react-oauth/google';
+import { useNavigate } from 'react-router-dom';
 import './index.css';
 
 export default function App() {
     const containerRef = useRef(null);
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
+    const [slideIndex, setSlideIndex] = useState(0);
+
+    const slides = [
+        {
+            image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1000&auto=format&fit=crop",
+            title: "Empowering your learning journey",
+            desc: "Join our Socratic AI platform to accelerate your studies."
+        },
+        {
+            image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop",
+            title: "Unlock Neural Insights",
+            desc: "Synthesize hundreds of documents in a matter of seconds."
+        },
+        {
+            image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop",
+            title: "Your Personal AI Tutor",
+            desc: "Experience interactive learning with dynamic quizzes and insights."
+        }
+    ];
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setSlideIndex((prev) => (prev + 1) % slides.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [slides.length]);
+
+    const handleGoogleLogin = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            setIsLoading(true);
+            try {
+                const res = await fetch('http://localhost:5000/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ googleToken: tokenResponse.access_token })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    if (data.user.role === 'teacher') {
+                        navigate('/teacher');
+                    } else {
+                        navigate('/student');
+                    }
+                } else {
+                    console.error('Login failed:', data.message);
+                    alert(data.message);
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                alert('Something went wrong. Please try again.');
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        onError: () => alert('Google Login Failed')
+    });
 
     useGSAP(() => {
         const q = gsap.utils.selector(containerRef);
@@ -453,15 +515,15 @@ export default function App() {
 
     return (
         <>
-            <div className="left-panel">
+            <div className="left-panel" style={{ backgroundImage: `url(${slides[slideIndex].image})`, transition: 'background-image 1s ease-in-out' }}>
                 <div className="logo-text">ARYNOX</div>
                 <div className="bottom-text">
-                    <h2>Empowering your learning journey</h2>
-                    <p>Join our Socratic AI platform to accelerate your studies.</p>
+                    <h2>{slides[slideIndex].title}</h2>
+                    <p>{slides[slideIndex].desc}</p>
                     <div className="slider-dots">
-                        <span className="dot active"></span>
-                        <span className="dot"></span>
-                        <span className="dot"></span>
+                        {slides.map((_, i) => (
+                            <span key={i} className={`dot ${i === slideIndex ? 'active' : ''}`}></span>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -476,7 +538,7 @@ export default function App() {
                 </label>
                 <label className="form-row">
                     <input type="checkbox" id="subscribe" name="subscribe" /> 
-                    <span style={{color: 'rgba(255,255,255,0.7)', marginLeft: '8px'}}>Agree to whatever</span>
+                    <span style={{color: 'rgba(255,255,255,0.7)', marginLeft: '8px'}}>Remember me</span>
                 </label>
                 <div className="form-row">
                     <input type="submit" value="Submit Mission" />
@@ -484,7 +546,7 @@ export default function App() {
             </div>
                 
             {/* Embedded Google OAuth Button */}
-            <button className="google-btn" onClick={(e) => { e.preventDefault(); alert("OAuth triggered!"); }}>
+            <button className="google-btn" onClick={(e) => { e.preventDefault(); handleGoogleLogin(); }} disabled={isLoading}>
                 <svg className="google-icon" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />

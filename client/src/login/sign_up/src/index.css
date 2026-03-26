@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
 
+@font-face {
+    font-family: 'Aquire';
+    src: url('../../../assets/Aquire-BW0ox.otf') format('opentype');
+}
+
 html,
 body {
     padding: 0;
@@ -187,7 +192,7 @@ input:-webkit-autofill:active{
     left: 40px;
     width: calc(45% - 40px);
     border-radius: 24px;
-    background-image: url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=1000&auto=format&fit=crop');
+    background-image: url('https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1000&auto=format&fit=crop');
     background-size: cover;
     background-position: center;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5);
@@ -215,7 +220,7 @@ input:-webkit-autofill:active{
     font-size: 32px;
     font-weight: 800;
     letter-spacing: 6px;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Aquire', sans-serif;
     text-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
@@ -224,6 +229,7 @@ input:-webkit-autofill:active{
     z-index: 2;
     color: white;
     text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    text-align: center;
 }
 
 .bottom-text h2 {
@@ -244,6 +250,7 @@ input:-webkit-autofill:active{
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: center;
 }
 
 .slider-dots .dot {
