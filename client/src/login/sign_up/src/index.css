@@ -42,17 +42,18 @@ body {
 
 .form-container .form-row {
     width: 100%;
-    height: 65px;
+    height: 53px;
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 
 .form-container .form-row input[type="text"],
-.form-container .form-row input[type="email"] {
+.form-container .form-row input[type="email"],
+.form-container .form-row input[type="password"] {
     width: 100%;
-    height: 44px;
+    height: 40px;
     margin: 0;
     padding: 0 16px;
     outline: none;
@@ -78,7 +79,8 @@ input:-webkit-autofill:active{
 }
 
 .form-container .form-row input[type="text"]:focus,
-.form-container .form-row input[type="email"]:focus {
+.form-container .form-row input[type="email"]:focus,
+.form-container .form-row input[type="password"]:focus {
     border-color: #7C3AED; /* Violet */
     box-shadow: 0 0 10px rgba(124, 58, 237, 0.3);
 }
@@ -88,7 +90,7 @@ input:-webkit-autofill:active{
     box-shadow: 0 0 5px rgba(124, 58, 237, 0.2);
 }
 
-.form-container label.form-row:nth-child(3) {
+.form-container label.form-row:nth-child(4) {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);

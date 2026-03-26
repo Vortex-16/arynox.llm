@@ -1,0 +1,360 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, Bot, CheckSquare, Square, FileText, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MoreVertical } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface ChatMessage {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+interface SourceDocument {
+    id: string;
+    name: string;
+    wordCount: string;
+    selected: boolean;
+}
+
+export default function Notebook() {
+    const [messages, setMessages] = useState<ChatMessage[]>([
+        {
+            id: '1',
+            role: 'assistant',
+            content: "Hello! I am your AI Socratic Tutor. You currently have 3 sources selected. Try asking: \"What are the key themes across these documents?\" or request a quiz."
+        }
+    ]);
+    const [inputMessage, setInputMessage] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const [sources, setSources] = useState<SourceDocument[]>([
+        { id: 'src-1', name: 'Advanced Physics Syllabus 2024.pdf', wordCount: '4,203 words', selected: true },
+        { id: 'src-2', name: 'Lecture 3: Thermodynamics Notes.docx', wordCount: '15,820 words', selected: true },
+        { id: 'src-3', name: 'Study Guide - Midterm.txt', wordCount: '2,150 words', selected: true },
+        { id: 'src-4', name: 'Newtonian Mechanics Summary.pdf', wordCount: '8,400 words', selected: false },
+    ]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    const toggleSource = (id: string) => {
+        setSources(prev => prev.map(s => s.id === id ? { ...s, selected: !s.selected } : s));
+    };
+
+    const simulateAudioGeneration = () => {
+        if (isGeneratingAudio) return;
+        setIsGeneratingAudio(true);
+        setTimeout(() => {
+            setIsGeneratingAudio(false);
+            // Mock completion
+        }, 4000);
+    };
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!inputMessage.trim()) return;
+
+        const userMsg: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'user',
+            content: inputMessage.trim()
+        };
+
+        setMessages(prev => [...prev, userMsg]);
+        setInputMessage('');
+        setIsTyping(true);
+
+        try {
+            const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+
+            if (!apiKey) {
+                setTimeout(() => {
+                    const socraticResponses = [
+                        "That's an interesting perspective. Considering the sources you've selected, how does that relate to the Second Law of Thermodynamics?",
+                        "If we assume that's true, what is the logical consequence for open systems?",
+                        "Why do you think the system behaves that way under stress? Look at page 4 of your syllabus for a hint.",
+                        "You are on the right track! Can you elaborate on the second part of your thought?"
+                    ];
+                    const mockResponse: ChatMessage = {
+                        id: (Date.now() + 1).toString(),
+                        role: 'assistant',
+                        content: socraticResponses[Math.floor(Math.random() * socraticResponses.length)]
+                    };
+                    setMessages(prev => [...prev, mockResponse]);
+                    setIsTyping(false);
+                }, 1500);
+                return;
+            }
+
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'llama3-8b-8192',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a Socratic tutor acting exclusively across selected source materials. You must ask guiding questions. Never give a direct answer if the student can discover it.'
+                        },
+                        ...messages.map(m => ({ role: m.role, content: m.content })),
+                        { role: 'user', content: userMsg.content }
+                    ]
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok && data.choices?.[0]?.message) {
+                setMessages(prev => [...prev, {
+                    id: data.id || (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: data.choices[0].message.content
+                }]);
+            } else {
+                throw new Error(data.error?.message || 'Failed to fetch from Groq');
+            }
+        } catch (error) {
+            console.error(error);
+            setMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: "I'm having trouble connecting to my neural core right now. Please try again in a moment."
+            }]);
+        } finally {
+            setIsTyping(false);
+        }
+    };
+
+    const selectedCount = sources.filter(s => s.selected).length;
+
+    return (
+        <div className="flex h-screen w-full bg-[#131314] text-[#e3e3e3] overflow-hidden font-sans">
+            {/* 1. Left Sidebar (Sources Panel) */}
+            <aside className="w-[320px] flex flex-col bg-[#1e1f20] shrink-0 border-r border-[#444746]/50 shadow-sm z-20">
+                <div className="p-5 flex flex-col gap-4">
+                    <Link to="/student" className="flex items-center gap-2 text-[#c4c7c5] hover:text-[#e3e3e3] transition-colors text-sm w-fit font-medium">
+                        <ArrowLeft className="w-4 h-4" /> Back to Student Dashboard
+                    </Link>
+                    <div className="flex items-center justify-between mt-2">
+                        <h1 className="text-[22px] font-medium text-[#e3e3e3]">Advanced Physics 101</h1>
+                    </div>
+                </div>
+
+                {/* Sources Header */}
+                <div className="px-5 py-2 flex items-center justify-between group">
+                    <span className="text-sm font-medium text-[#c4c7c5]">Sources</span>
+                    <button className="w-8 h-8 rounded-full hover:bg-[#333537] flex items-center justify-center transition-colors">
+                        <Plus className="w-5 h-5 text-[#c4c7c5]" />
+                    </button>
+                </div>
+
+                {/* Sources List */}
+                <div className="flex-1 overflow-y-auto px-3 flex flex-col gap-1 scrollbar-hide">
+                    {sources.map(src => (
+                        <div
+                            key={src.id}
+                            onClick={() => toggleSource(src.id)}
+                            className={`px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-3 ${src.selected
+                                ? 'bg-[#282a2c] hover:bg-[#333537]'
+                                : 'bg-transparent hover:bg-[#333537]'
+                                }`}
+                        >
+                            <div className="shrink-0 mt-0.5">
+                                {src.selected ? (
+                                    <div className="w-5 h-5 rounded-[4px] bg-[#a8c7fa] flex items-center justify-center">
+                                        <CheckSquare className="w-[14px] h-[14px] text-[#041e49]" strokeWidth={3} fill="#a8c7fa" />
+                                    </div>
+                                ) : (
+                                    <div className="w-5 h-5 rounded-[4px] border-[2px] border-[#8e918f] flex items-center justify-center" />
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className={`text-[14px] font-medium truncate ${src.selected ? 'text-[#e3e3e3]' : 'text-[#c4c7c5]'}`}>
+                                    {src.name}
+                                </h3>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    {/* Source Selection Status */}
+                    <div className="px-3 py-4 text-xs font-medium text-[#8e918f]">
+                         {selectedCount} selected
+                    </div>
+                </div>
+            </aside>
+
+            {/* 2. Main Studio Area */}
+            <main className="flex-1 flex flex-col relative bg-[#131314] overflow-hidden">
+                {/* Navbar */}
+                <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-[#131314]/95 backdrop-blur-sm z-20">
+                    <h2 className="text-[15px] font-medium text-[#e3e3e3]">Notebook guide</h2>
+                    <div className="flex items-center gap-2">
+                        <button className="text-sm font-medium text-[#c4c7c5] hover:text-[#e3e3e3] px-4 py-2 rounded-full hover:bg-[#282a2c] transition-colors flex items-center gap-2">
+                            <Share2 className="w-4 h-4" />
+                            Share
+                        </button>
+                        <button className="p-2 text-[#c4c7c5] hover:text-[#e3e3e3] hover:bg-[#282a2c] rounded-full transition-colors hidden md:block">
+                            <Settings2 className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-4 md:px-12 lg:px-24 py-4 flex flex-col scrollbar-hide">
+                    {/* Notebook Guide section */}
+                    <div className="max-w-[800px] w-full mx-auto mb-10 border-b border-[#444746]/50 pb-12">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Audio Overview Card */}
+                            <div className="col-span-1 md:col-span-2 bg-[#1e1f20] rounded-[24px] p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:bg-[#282a2c] transition-colors">
+                                <div className="flex gap-4 items-center">
+                                     <div className="w-12 h-12 rounded-full bg-[#333537] flex items-center justify-center shrink-0">
+                                          <PlayCircle className="w-6 h-6 text-[#a8c7fa]" />
+                                     </div>
+                                     <div>
+                                        <h3 className="text-[15px] font-medium text-[#e3e3e3] mb-0.5">Audio Overview</h3>
+                                        <p className="text-[13px] text-[#c4c7c5]">Two-speaker podcast summarizing your {selectedCount} sources</p>
+                                     </div>
+                                </div>
+                                <button
+                                        onClick={simulateAudioGeneration}
+                                        disabled={isGeneratingAudio || selectedCount === 0}
+                                        className="shrink-0 px-6 py-2.5 rounded-full bg-[#a8c7fa] hover:bg-[#b9d5ff] text-[#041e49] text-[14px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {isGeneratingAudio ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+                                    ) : (
+                                        'Generate'
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Utility Cards */}
+                            {[
+                                { title: 'FAQ', subtitle: 'Frequently asked questions' },
+                                { title: 'Study Guide', subtitle: 'Comprehensive overview' },
+                                { title: 'Timeline', subtitle: 'Chronological summary' },
+                                { title: 'Briefing Doc', subtitle: 'Key points and takeaways' },
+                            ].map((card) => (
+                                <div 
+                                    key={card.title}
+                                    className="bg-[#1e1f20] rounded-[20px] p-4 hover:bg-[#282a2c] transition-colors cursor-pointer group" 
+                                    onClick={() => setInputMessage(`Create a ${card.title}`)}
+                                >
+                                    <span className="text-[15px] text-[#e3e3e3] font-medium block mb-1">{card.title}</span>
+                                    <span className="text-[13px] text-[#c4c7c5]">{card.subtitle}</span>
+                                </div>
+                            ))}
+                         </div>
+                    </div>
+
+                    {/* Chat Messages Area */}
+                    <div className="max-w-[800px] w-full mx-auto flex flex-col gap-8 pb-32">
+                        {messages.map((msg) => {
+                            const isAI = msg.role === 'assistant';
+                            return (
+                                <div key={msg.id} className="flex gap-4 items-start">
+                                    <div className="shrink-0 mt-0.5">
+                                        {isAI ? (
+                                            <div className="w-8 h-8 rounded-full bg-[#1e1f20] border border-[#444746]/50 flex items-center justify-center">
+                                                <Sparkles className="w-4 h-4 text-[#a8c7fa]" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full bg-[#e3e3e3] flex items-center justify-center">
+                                                <User className="w-5 h-5 text-[#131314]" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <div className={`text-[15px] leading-relaxed break-words pt-1 ${isAI ? 'text-[#e3e3e3]' : 'text-[#e3e3e3]'}`}>
+                                            {isAI ? (
+                                                <div className="prose prose-invert prose-p:leading-relaxed max-w-none text-[#e3e3e3]">
+                                                    {msg.content}
+                                                </div>
+                                            ) : (
+                                                <div className="inline-block bg-[#1e1f20] px-4 py-2.5 rounded-[20px] rounded-tl-sm text-[#e3e3e3]">
+                                                    {msg.content}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        
+                        {isTyping && (
+                            <div className="flex gap-4 items-start">
+                                <div className="shrink-0 mt-0.5">
+                                    <div className="w-8 h-8 rounded-full bg-[#1e1f20] border border-[#444746]/50 flex items-center justify-center">
+                                        <Sparkles className="w-4 h-4 text-[#a8c7fa]" />
+                                    </div>
+                                </div>
+                                <div className="flex-1 mt-2 flex items-center gap-1.5 h-6">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#c4c7c5] animate-bounce" style={{ animationDelay: '0ms' }} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#c4c7c5] animate-bounce" style={{ animationDelay: '150ms' }} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#c4c7c5] animate-bounce" style={{ animationDelay: '300ms' }} />
+                                </div>
+                            </div>
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
+                </div>
+
+                {/* Bottom Chat Input constraints */}
+                <div className="absolute bottom-6 w-full px-4 lg:px-24 pointer-events-none z-30">
+                    <div className="max-w-[800px] mx-auto pointer-events-auto flex flex-col gap-3">
+                        
+                        {/* Suggested Questions Pills */}
+                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+                            {[
+                                "Explain the second law in simple terms",
+                                "Compare my notes to the syllabus",
+                                "Provide a critical analysis"
+                            ].map(suggestion => (
+                                <button
+                                    key={suggestion}
+                                    onClick={() => setInputMessage(suggestion)}
+                                    className="whitespace-nowrap px-4 py-2 rounded-full border border-[#444746] bg-[#1e1f20] text-[13px] text-[#c4c7c5] hover:bg-[#282a2c] hover:text-[#e3e3e3] transition-colors"
+                                >
+                                    {suggestion}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Input Area */}
+                        <form onSubmit={handleSendMessage} className="relative flex items-center bg-[#1e1f20] border border-[#444746]/80 rounded-[32px] shadow-lg p-2 focus-within:border-[#8e918f] transition-colors">
+                            <button type="button" className="p-2.5 mx-1 text-[#c4c7c5] hover:text-[#e3e3e3] rounded-full hover:bg-[#333537] transition-colors shrink-0">
+                                <Plus className="w-6 h-6" />
+                            </button>
+                            <input
+                                type="text"
+                                value={inputMessage}
+                                onChange={(e) => setInputMessage(e.target.value)}
+                                placeholder="Type to chat with your sources"
+                                className="flex-1 bg-transparent px-2 py-3 text-[15px] text-[#e3e3e3] outline-none placeholder:text-[#8e918f]"
+                                disabled={isTyping}
+                            />
+                            <button
+                                type="submit"
+                                disabled={!inputMessage.trim() || isTyping}
+                                className={`w-10 h-10 mr-1 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                                    inputMessage.trim() && !isTyping 
+                                        ? 'bg-[#a8c7fa] text-[#041e49] hover:bg-[#b9d5ff]' 
+                                        : 'bg-[#333537] text-[#8e918f]'
+                                }`}
+                            >
+                                {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
+                            </button>
+                        </form>
+                        <div className="text-center text-[12px] text-[#8e918f] font-medium tracking-wide">
+                            NotebookLM clone may display inaccurate info, so double-check its responses.
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+}

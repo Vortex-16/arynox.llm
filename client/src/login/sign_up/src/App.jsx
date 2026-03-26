@@ -16,8 +16,8 @@ export default function App() {
 
         const containerEl = containerRef.current;
         const checkboxEl = querySelector('.form-container .form-row input[type="checkbox"]');
-        const nameEl = querySelector('.form-container .form-row input[name="email"]');
-        const emailEl = querySelector('.form-container .form-row input[name="password"]');
+        const nameEl = querySelector('.form-container .form-row input[name="name"]');
+        const emailEl = querySelector('.form-container .form-row input[name="email"]');
         const submitBtn = querySelector('.form-container .form-row input[type="submit"]');
 
         const sprayer = querySelector('.sprayer');
@@ -120,7 +120,8 @@ export default function App() {
         };
 
         const onEmailInput = () => {
-            emailValid = emailEl.value.length > 5;
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            emailValid = emailRegex.test(emailEl.value);
             if (emailValid) {
                 emailTl.play();
                 emailEl.classList.add("valid");
@@ -469,10 +470,13 @@ export default function App() {
             <div className="container" ref={containerRef}>
             <div className="form-container">
                 <label className="form-row">
-                    <input autoComplete="username" type="email" id="email" name="email" placeholder="Email" required />
+                    <input autoComplete="one-time-code" type="text" id="name" name="name" placeholder="Name" required />
                 </label>
                 <label className="form-row">
-                    <input autoComplete="current-password" type="password" id="password" name="password" placeholder="Password" required />
+                    <input autoComplete="username" type="email" id="email" name="email" placeholder="E-mail" required />
+                </label>
+                <label className="form-row">
+                    <input autoComplete="new-password" type="password" id="password" name="password" placeholder="Password" required />
                 </label>
                 <label className="form-row">
                     <input type="checkbox" id="subscribe" name="subscribe" /> 
