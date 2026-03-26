@@ -65,6 +65,7 @@ function App() {
                 Sign Up
               </Link>
           </div>
+          <div className="grain-overlay" />
         </main>
       } />
       <Route path="/login" element={<LoginPage />} />
