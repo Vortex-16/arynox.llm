@@ -48,6 +48,16 @@ const Features: React.FC = () => {
         </span>
       </div>
 
+      {/* Signature Text: Middle-left, #F9E95C aligned with header padding */}
+      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-10 pointer-events-none select-none flex flex-col gap-6">
+        <h2 className="text-[#F9E95C] font-black text-[8vw] lg:text-[6.5vw] uppercase leading-none opacity-90 tracking-normal antialiased">
+          Content<br />Isolation
+        </h2>
+        <p className="text-[#F9E95C] font-semibold text-[2.2vw] lg:text-[1.4vw] max-w-[550px] opacity-80 leading-relaxed antialiased">
+          Separates content by department for clarity,<br />security, and efficient access.
+        </p>
+      </div>
+
       {/* Centered Loop Video with 3D Mouse Reaction */}
       <video
         ref={videoRef}
