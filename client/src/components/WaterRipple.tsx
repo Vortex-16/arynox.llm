@@ -31,11 +31,11 @@ const WaterRipple: React.FC<WaterRippleProps> = ({
   decay = 0.8,
   chromaticDispersion = 0.12,
   lightIntensity = 0.85,
-  lightColor = "#F0E0E0",
+  lightColor = "#F9E95C",
   speed = 0.8,
   bgColor = "#FF5458",
   text = "arynox.llm",
-  textColor = "#F0E0E0",
+  textColor = "#F9E95C",
   rotationIntensity = 0.2,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -78,6 +78,7 @@ const WaterRipple: React.FC<WaterRippleProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const canvasEl = canvas;
+    let isDisposed = false;
 
     const gl = canvasEl.getContext("webgl", {
       alpha: false,
@@ -297,6 +298,7 @@ const WaterRipple: React.FC<WaterRippleProps> = ({
     // --- Content texture ---
     const contentTex = gl.createTexture()!;
     function updateContentTexture() {
+      if (isDisposed) return;
       const c = drawContentTexture(canvasEl.width, canvasEl.height);
       gl!.bindTexture(gl!.TEXTURE_2D, contentTex);
       gl!.texImage2D(
@@ -411,6 +413,7 @@ const WaterRipple: React.FC<WaterRippleProps> = ({
     // --- Render ---
     let animId: number;
     const render = () => {
+      if (isDisposed) return;
       animId = requestAnimationFrame(render);
 
       // Smooth the rotation (lerp toward target)
@@ -490,6 +493,7 @@ const WaterRipple: React.FC<WaterRippleProps> = ({
     render();
 
     return () => {
+      isDisposed = true;
       cancelAnimationFrame(animId);
       clearTimeout(moveTimer);
       window.removeEventListener("mousemove", onMouseMove);
