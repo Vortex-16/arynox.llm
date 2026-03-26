@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   UploadCloud, FileText, CheckCircle, Clock, Loader2, Database, LayoutDashboard, 
   Settings, LogOut, Search, BarChart3
@@ -15,6 +15,7 @@ interface DocumentFile {
   size: string;
   status: DocState;
   progress: number;
+  fileUrl?: string;
 }
 
 export default function TeacherDashboard() {
@@ -28,27 +29,51 @@ export default function TeacherDashboard() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const simulatePipeline = (docId: string) => {
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/documents');
+        const data = await response.json();
+        const mappedDocs = data.map((doc: any) => ({
+          id: doc._id,
+          name: doc.title,
+          size: 'DB', // Representing saved in database
+          status: 'ready',
+          progress: 100,
+          fileUrl: doc.fileUrl
+        }));
+        setDocuments(mappedDocs);
+      } catch (error) {
+        console.error("Failed to load textbooks from ChromaDB:", error);
+      }
+    };
+    fetchDocuments();
+  }, []);
+
+  const uploadToBackend = async (docId: string, file: File) => {
+    // Start Animation Sequence
     const steps: { status: DocState; targetProgress: number; duration: number }[] = [
       { status: 'uploading', targetProgress: 20, duration: 800 },
       { status: 'parsing', targetProgress: 45, duration: 1500 },
       { status: 'chunking', targetProgress: 75, duration: 2000 },
-      { status: 'embedding', targetProgress: 95, duration: 2500 },
-      { status: 'ready', targetProgress: 100, duration: 500 },
+      { status: 'embedding', targetProgress: 95, duration: 2500 }
     ];
 
     let currentStep = 0;
+    let keepAnimating = true;
 
-    const runStep = () => {
-      if (currentStep >= steps.length) return;
+    const animateProgress = () => {
+      if (!keepAnimating || currentStep >= steps.length) return;
       const step = steps[currentStep];
-      
       setDocuments(prev => prev.map(doc => doc.id === docId ? { ...doc, status: step.status } : doc));
+      
       const ticks = 5;
       const tickDuration = step.duration / ticks;
       let currentTick = 1;
 
       const interval = setInterval(() => {
+        if(!keepAnimating) { clearInterval(interval); return; }
+        
         setDocuments(prev => prev.map(doc => {
           if (doc.id !== docId) return doc;
           const prevProgress = currentStep === 0 ? 0 : steps[currentStep - 1].targetProgress;
@@ -60,13 +85,42 @@ export default function TeacherDashboard() {
         if (currentTick > ticks) {
           clearInterval(interval);
           currentStep++;
-          runStep();
+          animateProgress();
         }
       }, tickDuration);
     };
 
-    runStep();
+    animateProgress();
+
+    // Perform actual API Fetch concurrently
+    try {
+        const formData = new FormData();
+        formData.append('document', file);
+        formData.append('title', file.name);
+        formData.append('department', 'General Faculty');
+
+        const apiResponse = await fetch('http://localhost:5000/api/documents/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await apiResponse.json();
+        if (!apiResponse.ok) throw new Error(data.error || 'Upload failed');
+
+        // Finish Animation Forcefully to Ready state and lock in fileUrl
+        keepAnimating = false;
+        setDocuments(prev => prev.map(doc => 
+          doc.id === docId ? { ...doc, status: 'ready', progress: 100, fileUrl: data.documentMeta?.fileUrl } : doc
+        ));
+
+    } catch (error) {
+        console.error("API Upload failed for", file.name, error);
+        keepAnimating = false;
+        setDocuments(prev => prev.map(doc => doc.id === docId ? { ...doc, status: 'error' } : doc));
+    }
   };
+
+
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -78,7 +132,9 @@ export default function TeacherDashboard() {
       progress: 0,
     }));
     setDocuments(prev => [...newDocs, ...prev]);
-    newDocs.forEach(doc => simulatePipeline(doc.id));
+    Array.from(files).forEach((f, index) => {
+        uploadToBackend(newDocs[index].id, f);
+    });
   };
 
   const statusColors: Record<DocState, { color: string, bg: string, label: string, icon: React.ReactNode }> = {
@@ -253,6 +309,19 @@ export default function TeacherDashboard() {
                                 </div>
                                 <span className="text-xs font-bold text-white/50 w-8 text-right">{Math.round(doc.progress)}%</span>
                               </div>
+                              
+                              {/* Inject the "View PDF" feature if Document is totally ready and has a file url assigned by backend */}
+                              {doc.status === 'ready' && doc.fileUrl && (
+                                <a 
+                                  href={`http://localhost:5000${doc.fileUrl}`} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium text-white/70 hover:text-white transition-all w-fit"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  View Source Document
+                                </a>
+                              )}
                             </div>
                           </div>
                         </div>

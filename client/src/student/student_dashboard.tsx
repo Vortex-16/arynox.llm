@@ -1,8 +1,29 @@
 
 import { BookOpen, Clock, TrendingUp, Flame, ChevronRight, FileText, Activity, BrainCircuit, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 
 export default function StudentAnalyticsDashboard() {
+    const [documents, setDocuments] = useState<any[]>([]);
+    const [isLoadingDocs, setIsLoadingDocs] = useState(true);
+
+    useEffect(() => {
+        const fetchDocs = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/documents');
+                if (res.ok) {
+                    const data = await res.json();
+                    setDocuments(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch documents", err);
+            } finally {
+                setIsLoadingDocs(false);
+            }
+        };
+        fetchDocs();
+    }, []);
+
     return (
         <div className="min-h-screen w-full bg-[#0a0a0a] text-white font-sans selection:bg-amber-500/30">
             {/* Top Navigation */}
@@ -115,24 +136,34 @@ export default function StudentAnalyticsDashboard() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Link to="/student/notebook" className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/20 hover:bg-white/[0.02] transition-all group cursor-pointer block hover:shadow-[0_8px_30px_rgba(245,158,11,0.05)]">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                        <FileText className="w-5 h-5 text-amber-500" />
+                                {isLoadingDocs ? (
+                                    <div className="bg-[#111] border border-white/5 rounded-2xl p-5 flex items-center justify-center min-h-[160px]">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
                                     </div>
-                                    <h3 className="font-semibold text-lg mb-1 group-hover:text-amber-400 transition-colors">Advanced Physics 101</h3>
-                                    <p className="text-sm text-white/50 mb-4 line-clamp-2">Detailed notes and Socratic discussions on Thermodynamics and Mechanics.</p>
-                                    <div className="flex items-center justify-between text-xs text-white/40 border-t border-white/5 pt-4">
-                                        <span>4 Sources</span>
-                                        <span>Updated today</span>
-                                    </div>
-                                </Link>
+                                ) : (
+                                    <>
+                                        {documents.slice(0, 3).map((doc: any) => (
+                                            <Link key={doc._id} to="/student/notebook" className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/20 hover:bg-white/[0.02] transition-all group cursor-pointer block hover:shadow-[0_8px_30px_rgba(245,158,11,0.05)]">
+                                                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                                    <FileText className="w-5 h-5 text-amber-500" />
+                                                </div>
+                                                <h3 className="font-semibold text-lg mb-1 group-hover:text-amber-400 transition-colors line-clamp-1">{doc.title}</h3>
+                                                <p className="text-sm text-white/50 mb-4 line-clamp-2">Socratic workspace prepared by {doc.department} dept.</p>
+                                                <div className="flex items-center justify-between text-xs text-white/40 border-t border-white/5 pt-4">
+                                                    <span>Active RAG Base</span>
+                                                    <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                                                </div>
+                                            </Link>
+                                        ))}
 
-                                <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/20 transition-all group cursor-pointer border-dashed border-white/10 flex flex-col items-center justify-center min-h-[220px]">
-                                    <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center mb-3 group-hover:bg-white/5 transition-colors">
-                                        <Plus className="w-5 h-5 text-white/50" />
-                                    </div>
-                                    <span className="font-medium text-white/70">Create New Notebook</span>
-                                </div>
+                                        <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/20 transition-all group cursor-pointer border-dashed border-white/10 flex flex-col items-center justify-center min-h-[160px]">
+                                            <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center mb-3 group-hover:bg-white/5 transition-colors">
+                                                <Plus className="w-5 h-5 text-white/50" />
+                                            </div>
+                                            <span className="font-medium text-white/70">Create New Notebook</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -26,25 +26,29 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
         // 2. Chunk and embed
         const chunkCount = await processDocumentAndStore(text, title, chromaCollectionName);
 
-        // 3. Save metadata to MongoDB
+        // 3. Save metadata to MongoDB including the newly saved file path
         const documentMeta = new DocumentMeta({
             title,
             department: department || 'General',
             chromaCollectionRef: chromaCollectionName,
+            fileUrl: `/uploads/${req.file.filename}` // Save URL for teacher portal
         });
         await documentMeta.save();
 
-        // 4. Cleanup the temp file
-        fs.unlinkSync(req.file.path);
+        // Note: No longer deleting the file with fs.unlinkSync because the teacher needs to view it.
 
         res.status(201).json({
             message: 'Document uploaded and processed successfully.',
             documentMeta,
             chunksGenerated: chunkCount,
         });
-    } catch (error) {
-        console.error("Upload Error:", error);
-        res.status(500).json({ error: 'Failed to process document.' });
+    } catch (error: any) {
+        console.error("Upload Error (Full Detail):", error);
+        // Cleanup the temp file if parsing failed
+        if (req.file?.path && fs.existsSync(req.file.path)) {
+            try { fs.unlinkSync(req.file.path); } catch(_) {}
+        }
+        res.status(500).json({ error: error?.message || 'Failed to process document.' });
     }
 };
 

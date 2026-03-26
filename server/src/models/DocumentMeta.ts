@@ -5,6 +5,7 @@ export interface IDocumentMeta extends Document {
   department?: string;
   uploadedAt: Date;
   chromaCollectionRef: string;
+  fileUrl?: string; // New field for viewing the PDF natively
 }
 
 const DocumentMetaSchema: Schema = new Schema({
@@ -12,6 +13,7 @@ const DocumentMetaSchema: Schema = new Schema({
   department: { type: String, required: false },
   uploadedAt: { type: Date, default: Date.now },
   chromaCollectionRef: { type: String, required: true },
+  fileUrl: { type: String, required: false },
 });
 
 export default mongoose.model<IDocumentMeta>('DocumentMeta', DocumentMetaSchema);

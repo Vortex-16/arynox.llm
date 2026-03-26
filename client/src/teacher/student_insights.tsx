@@ -1,6 +1,27 @@
-import { BarChart3, Users, Network, TrendingUp, Search, Database } from 'lucide-react';
+import { BarChart3, Users, Network, TrendingUp, Search, Database, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 
 export default function StudentInsights() {
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/analytics/insights');
+        if (res.ok) {
+          const data = await res.json();
+          setAnalytics(data);
+        }
+      } catch (err) {
+        console.error("Failed to load analytics", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
       
@@ -9,14 +30,16 @@ export default function StudentInsights() {
         <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/10 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 group-hover:text-amber-400 transition-all"><BarChart3 className="w-16 h-16"/></div>
           <h3 className="text-white/40 text-sm font-medium mb-2">Total Student Queries</h3>
-          <div className="text-4xl font-bold mb-2">3,492</div>
-          <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium"><TrendingUp className="w-4 h-4"/> +14% from last week</div>
+          <div className="text-4xl font-bold mb-2">
+            {isLoading ? <Loader2 className="w-8 h-8 animate-spin text-amber-500" /> : (analytics?.totalQueries || 0)}
+          </div>
+          <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium"><TrendingUp className="w-4 h-4"/> Real-time indexing active</div>
         </div>
         <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/10 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 group-hover:text-violet-400 transition-all"><Users className="w-16 h-16"/></div>
           <h3 className="text-white/40 text-sm font-medium mb-2">Active Students (Daily)</h3>
-          <div className="text-4xl font-bold mb-2">156</div>
-          <div className="text-white/30 text-sm">82% of enrolled class</div>
+          <div className="text-4xl font-bold mb-2">1</div>
+          <div className="text-white/30 text-sm">Waiting for more users...</div>
         </div>
         <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/10 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 group-hover:text-red-400 transition-all"><Network className="w-16 h-16"/></div>
@@ -29,34 +52,31 @@ export default function StudentInsights() {
       {/* Main Visualizations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* Visual Chart: Common Queries (Native Bar Chart) */}
-        <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/10 flex flex-col">
-          <h3 className="text-xl font-semibold mb-8 flex items-center gap-2">
+        {/* Visual Chart: Recent Queries (Replaced Bar Chart) */}
+        <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/10 flex flex-col h-[400px]">
+          <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
             <Search className="w-5 h-5 text-amber-400" />
-            Common Student Queries
+            Live Student Queries Stream
           </h3>
           
-          <div className="flex flex-col gap-6 flex-1">
-            {[
-              { query: "Formula for expanding entropy in closed systems?", perc: 78, color: "bg-amber-500" },
-              { query: "When is the midterm assignment due?", perc: 65, color: "bg-violet-500" },
-              { query: "Can you explain the second law of thermodynamics?", perc: 45, color: "bg-red-400" },
-              { query: "What are real-world examples of open systems?", perc: 25, color: "bg-blue-400" },
-              { query: "Summary of chapter 4 required reading?", perc: 15, color: "bg-emerald-400" },
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col gap-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/80 font-medium truncate pr-4">{item.query}</span>
-                  <span className="text-white/40 shrink-0">{item.perc}%</span>
+          <div className="flex flex-col gap-4 flex-1 overflow-y-auto scrollbar-hide pr-2">
+            {isLoading ? (
+               <div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-white/50" /></div>
+            ) : analytics?.recentLogs?.length === 0 ? (
+               <div className="text-white/50 text-sm">No queries logged yet.</div>
+            ) : (
+              analytics?.recentLogs?.map((log: any, i: number) => (
+                <div key={i} className="flex flex-col gap-1 p-3 rounded-xl bg-white/5 border border-white/5">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-white/90 text-[14px] font-medium leading-snug">{log.query}</span>
+                    <span className="text-white/40 text-xs shrink-0">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div className={`text-[12px] font-medium w-fit px-2 py-0.5 rounded-full ${log.status === 'OUT_OF_SCOPE' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                    {log.status === 'OUT_OF_SCOPE' ? 'Non-Academic' : 'Academic Focus'}
+                  </div>
                 </div>
-                <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full ${item.color} shadow-[0_0_10px_currentColor]`} 
-                    style={{ width: `${item.perc}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

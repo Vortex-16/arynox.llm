@@ -28,12 +28,33 @@ export default function Notebook() {
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const [sources, setSources] = useState<SourceDocument[]>([
-        { id: 'src-1', name: 'Advanced Physics Syllabus 2024.pdf', wordCount: '4,203 words', selected: true },
-        { id: 'src-2', name: 'Lecture 3: Thermodynamics Notes.docx', wordCount: '15,820 words', selected: true },
-        { id: 'src-3', name: 'Study Guide - Midterm.txt', wordCount: '2,150 words', selected: true },
-        { id: 'src-4', name: 'Newtonian Mechanics Summary.pdf', wordCount: '8,400 words', selected: false },
-    ]);
+    const [sources, setSources] = useState<SourceDocument[]>([]);
+    const [isLoadingSources, setIsLoadingSources] = useState(true);
+
+    useEffect(() => {
+        // Fetch real documents uploaded by the Teacher
+        const fetchDocuments = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/documents');
+                if (res.ok) {
+                    const data = await res.json();
+                    // Map MongoDB documents to NotebookLM sources
+                    const mappedSources = data.map((doc: any, index: number) => ({
+                        id: doc._id,
+                        name: doc.title,
+                        wordCount: 'Processed File', // We don't store exact word count, so using a placeholder label
+                        selected: index < 3 // Auto-select up to 3 sources by default
+                    }));
+                    setSources(mappedSources);
+                }
+            } catch (err) {
+                console.error("Failed to load documents:", err);
+            } finally {
+                setIsLoadingSources(false);
+            }
+        };
+        fetchDocuments();
+    }, []);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -67,58 +88,33 @@ export default function Notebook() {
         setIsTyping(true);
 
         try {
-            const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-
-            if (!apiKey) {
-                setTimeout(() => {
-                    const socraticResponses = [
-                        "That's an interesting perspective. Considering the sources you've selected, how does that relate to the Second Law of Thermodynamics?",
-                        "If we assume that's true, what is the logical consequence for open systems?",
-                        "Why do you think the system behaves that way under stress? Look at page 4 of your syllabus for a hint.",
-                        "You are on the right track! Can you elaborate on the second part of your thought?"
-                    ];
-                    const mockResponse: ChatMessage = {
-                        id: (Date.now() + 1).toString(),
-                        role: 'assistant',
-                        content: socraticResponses[Math.floor(Math.random() * socraticResponses.length)]
-                    };
-                    setMessages(prev => [...prev, mockResponse]);
-                    setIsTyping(false);
-                }, 1500);
-                return;
-            }
-
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            // Forward the query to our Node backend.
+            // The backend handles semantic search in ChromaDB, academic relevancy filtering,
+            // Socratic prompting, and AI failovers automatically.
+            const response = await fetch('http://localhost:5000/api/chat/ask', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama3-8b-8192',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a Socratic tutor acting exclusively across selected source materials. You must ask guiding questions. Never give a direct answer if the student can discover it.'
-                        },
-                        ...messages.map(m => ({ role: m.role, content: m.content })),
-                        { role: 'user', content: userMsg.content }
-                    ]
+                    query: userMsg.content,
+                    department: 'General',
+                    studentId: 'student_123'
                 })
             });
 
             const data = await response.json();
-            if (response.ok && data.choices?.[0]?.message) {
+            if (response.ok && data.answer) {
                 setMessages(prev => [...prev, {
-                    id: data.id || (Date.now() + 1).toString(),
+                    id: (Date.now() + 1).toString(),
                     role: 'assistant',
-                    content: data.choices[0].message.content
+                    content: data.answer
                 }]);
             } else {
-                throw new Error(data.error?.message || 'Failed to fetch from Groq');
+                throw new Error(data.error || 'Failed to fetch from backend router');
             }
         } catch (error) {
-            console.error(error);
+            console.error("Chat Error:", error);
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
@@ -154,7 +150,15 @@ export default function Notebook() {
 
                 {/* Sources List */}
                 <div className="flex-1 overflow-y-auto px-3 flex flex-col gap-1 scrollbar-hide">
-                    {sources.map(src => (
+                    {isLoadingSources ? (
+                        <div className="flex justify-center p-4">
+                            <Loader2 className="w-5 h-5 animate-spin text-[#c4c7c5]" />
+                        </div>
+                    ) : sources.length === 0 ? (
+                        <div className="px-3 py-4 text-[13px] text-[#8e918f] text-center">
+                            No sources uploaded yet.
+                        </div>
+                    ) : sources.map(src => (
                         <div
                             key={src.id}
                             onClick={() => toggleSource(src.id)}
