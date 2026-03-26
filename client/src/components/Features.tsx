@@ -63,17 +63,13 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
     return `rgb(${r}, ${g}, ${b})`;
   };
 
-  const BrandContent = () => (
+  const BrandContent = ({ title, desc }: { title: string; desc: string }) => (
     <div className="absolute left-6 top-1/2 -translate-y-1/2 z-10 select-none flex flex-col gap-6">
       <h2 className="text-[#F9E95C] font-black text-[8vw] lg:text-[6.5vw] uppercase leading-none opacity-90 tracking-normal antialiased">
-        Content
-        <br />
-        Isolation
+        {title}
       </h2>
       <p className="text-[#F9E95C] font-semibold text-[2.2vw] lg:text-[1.4vw] max-w-[550px] opacity-80 leading-relaxed antialiased">
-        Separates content by department for clarity,
-        <br />
-        security, and efficient access.
+        {desc}
       </p>
     </div>
   );
@@ -87,7 +83,7 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
 
       {/* ── FEATURE 1 (Seagreen base, always underneath) ── */}
       <div className="absolute inset-0 bg-[#20B2AA] flex items-center justify-center pointer-events-none">
-        <BrandContent />
+        <BrandContent title="Content-Isolation" desc="Separates content by department for clarity, security, and efficient access." />
         <div className="absolute inset-0 flex items-center justify-center z-0">
           <video ref={video1Ref} src={blobGradientVideo} autoPlay muted loop playsInline
             className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto" />
@@ -106,9 +102,9 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
         {/* F2 header — slides out upward + turns seagreen as F3 enters */}
         <div className="absolute left-0 w-full h-[32px] border-b-2 border-black z-40 flex items-center justify-start px-6 pointer-events-auto"
           style={{ top: `-${p3 * 100}vh`, backgroundColor: p3 > 0 ? toSeagreen(p3) : toRed(p2) }}>
-          <span className="text-black font-bold text-[18px] tracking-tight antialiased">Content-Isolation</span>
+          <span className="text-black font-bold text-[18px] tracking-tight antialiased">Confidence-Based Refusal System</span>
         </div>
-        <BrandContent />
+        <BrandContent title="Confidence-Based Refusal System" desc="Refuses uncertain requests based on confidence level, ensuring accurate and reliable responses." />
         <div className="absolute inset-0 flex items-center justify-center z-0"
           style={{ transform: `translateY(${-(1 - p2) * 100}vh)` }}>
           <video ref={video2Ref} src={blobGradientVideo} autoPlay muted loop playsInline
@@ -123,9 +119,9 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
           {/* F3 header — slides out upward + turns red as F4 enters */}
           <div className="absolute left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
             style={{ top: `-${p4 * 100}vh`, backgroundColor: toRed(p4) }}>
-            <span className="text-black font-bold text-[18px] tracking-tight antialiased">Content-Isolation</span>
+            <span className="text-black font-bold text-[18px] tracking-tight antialiased">Exam-Mode Lock</span>
           </div>
-          <BrandContent />
+          <BrandContent title="Exam-Mode Lock" desc="Locks the system into exam mode, restricting access to ensure a focused and secure testing environment." />
           <div className="absolute inset-0 flex items-center justify-center z-0"
             style={{ transform: `translateY(${-(1 - p3) * 100}vh)` }}>
             <video ref={video3Ref} src={blobGradientVideo} autoPlay muted loop playsInline
@@ -141,9 +137,9 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
           {/* F4 header — turns red as it settles */}
           <div className="absolute top-0 left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
             style={{ backgroundColor: toRed(p4) }}>
-            <span className="text-black font-bold text-[18px] tracking-tight antialiased">Content-Isolation</span>
+            <span className="text-black font-bold text-[18px] tracking-tight antialiased">Faculty-Controlled AI Scope</span>
           </div>
-          <BrandContent />
+          <BrandContent title="Faculty-Controlled AI Scope" desc="Faculty-controlled AI scope lets instructors define and limit AI usage, ensuring guided and appropriate assistance." />
           <div className="absolute inset-0 flex items-center justify-center z-0"
             style={{ transform: `translateY(${-(1 - p4) * 100}vh)` }}>
             <video ref={video4Ref} src={blobGradientVideo} autoPlay muted loop playsInline
