@@ -6,6 +6,7 @@ import WaterRipple from './components/WaterRipple'
 import TeacherDashboard from './teacher/teacher_dashboard'
 import StudentDashboard from './student/student_dashboard'
 import Notebook from './student/notebook'
+import logoSvg from './assets/logo.svg'
 
 function App() {
   return (
@@ -64,6 +65,17 @@ function App() {
               >
                 Sign Up
               </Link>
+          </div>
+
+          {/* Logo below buttons */}
+          <div 
+            className="absolute z-50 pointer-events-none flex justify-center
+                       -translate-x-1/2
+                       /* Mobile */    left-[50%] top-[55%] w-[140px]
+                       /* Tablet */    md:left-[50%] md:top-[66%] md:w-[200px]
+                       /* Desktop */   lg:left-[50%] lg:top-[74%] lg:w-[260px]"
+          >
+            <img src={logoSvg} alt="Logo" className="w-full h-auto opacity-90" />
           </div>
 
           <div className="grain-overlay" />
