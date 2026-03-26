@@ -103,9 +103,9 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
       {/* ── FEATURE 2 (Red, slides over F1) ── z-30 */}
       <div className="absolute left-0 w-full h-[100vh] bg-[#FF5458] z-30 overflow-hidden pointer-events-none"
         style={{ top: `${(1 - p2) * 100}vh` }}>
-        {/* F2 header — starts white, turns seagreen as F3 enters */}
-        <div className="absolute top-0 left-0 w-full h-[32px] border-b-2 border-black z-40 flex items-center justify-start px-6 pointer-events-auto"
-          style={{ backgroundColor: p3 > 0 ? toSeagreen(p3) : toRed(p2) }}>
+        {/* F2 header — slides out upward + turns seagreen as F3 enters */}
+        <div className="absolute left-0 w-full h-[32px] border-b-2 border-black z-40 flex items-center justify-start px-6 pointer-events-auto"
+          style={{ top: `-${p3 * 100}vh`, backgroundColor: p3 > 0 ? toSeagreen(p3) : toRed(p2) }}>
           <span className="text-black font-bold text-[18px] tracking-tight antialiased">Content-Isolation</span>
         </div>
         <BrandContent />
@@ -120,9 +120,9 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
       {p3 > 0 && (
         <div className="absolute left-0 w-full h-[100vh] bg-[#20B2AA] z-40 overflow-hidden pointer-events-none"
           style={{ top: `${(1 - p3) * 100}vh` }}>
-          {/* F3 header — turns red as F4 enters */}
-          <div className="absolute top-0 left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
-            style={{ backgroundColor: toRed(p4) }}>
+          {/* F3 header — slides out upward + turns red as F4 enters */}
+          <div className="absolute left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
+            style={{ top: `-${p4 * 100}vh`, backgroundColor: toRed(p4) }}>
             <span className="text-black font-bold text-[18px] tracking-tight antialiased">Content-Isolation</span>
           </div>
           <BrandContent />
