@@ -19,11 +19,11 @@ function App() {
             decay={0.8}
             chromaticDispersion={0.08}
             lightIntensity={0.85}
-            lightColor="#F0E0E0"
+            lightColor="#F9E95C"
             speed={0.8}
             bgColor="#FF5458"
             text="arynox.llm"
-            textColor="#F0E0E0"
+            textColor="#F9E95C"
             rotationIntensity={0.2}
           />
 
@@ -35,7 +35,7 @@ function App() {
 
           {/* New Non-Rippled Text Overlay */}
           <div 
-            className="absolute z-50 pointer-events-none select-none text-center font-extrabold text-[#F0E0E0] 
+            className="absolute z-50 pointer-events-none select-none text-center font-extrabold text-[#F9E95C] 
                        -translate-x-1/2 -translate-y-1/2
                        /* Mobile */    left-[50%] top-[35%] w-[309px] text-[16px] leading-[23px]
                        /* Tablet */    md:left-[50%] md:top-[45%] md:w-[750px] md:text-[38px] md:leading-[50px]
@@ -54,17 +54,18 @@ function App() {
           >
               <Link 
                 to="/login" 
-                className="px-8 py-3 rounded-full border border-[#F0E0E0]/30 text-[#F0E0E0] hover:bg-[#F0E0E0] hover:text-[#FF5458] transition-all font-bold text-[15px] shadow-lg backdrop-blur-sm"
+                className="px-8 py-3 rounded-full border border-[#F9E95C]/30 text-[#F9E95C] hover:bg-[#F9E95C] hover:text-[#FF5458] transition-all font-bold text-[15px] shadow-lg backdrop-blur-sm"
               >
                 Login
               </Link>
               <Link 
                 to="/signup" 
-                className="px-6 py-3 md:px-8 rounded-full bg-[#F0E0E0] text-[#FF5458] shadow-xl hover:bg-white hover:scale-[1.05] transition-all font-bold text-[15px] whitespace-nowrap"
+                className="px-6 py-3 md:px-8 rounded-full bg-[#F9E95C] text-[#FF5458] shadow-xl hover:bg-white hover:scale-[1.05] transition-all font-bold text-[15px] whitespace-nowrap"
               >
                 Sign Up
               </Link>
           </div>
+
           <div className="grain-overlay" />
         </main>
       } />
