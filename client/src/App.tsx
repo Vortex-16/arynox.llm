@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import './App.css'
 import { Routes, Route, Link } from 'react-router-dom'
 import LoginPage from './login/login_page/src/App'
@@ -14,30 +14,34 @@ import gsap from 'gsap'
 function App() {
   const horizontalRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
-  const [scrollX, setScrollX] = useState(0); // 0 to 100
+  const targetX = useRef(0);
+  const currentX = useRef(0);
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-      // Prevent browser default back/forward gestures if possible, 
-      // but mainly stop vertical scroll which doesn't exist anyway.
-      const speed = 0.12;
-      setScrollX((prev) => {
-        const next = prev + e.deltaY * speed;
-        return Math.max(0, Math.min(100, next));
-      });
+      // Normalize wheel delta for consistency
+      const speed = 0.05;
+      targetX.current = Math.max(0, Math.min(100, targetX.current + e.deltaY * speed));
     };
-    window.addEventListener('wheel', handleWheel, { passive: false });
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
     return () => window.removeEventListener('wheel', handleWheel);
   }, []);
 
   useGSAP(() => {
-    gsap.to(sliderRef.current, {
-      x: `-${scrollX}vw`,
-      duration: 0.7,
-      ease: 'power2.out',
-      overwrite: 'auto'
-    });
-  }, [scrollX]);
+    const tick = () => {
+      // Smooth interpolation (lerp)
+      const lerpFactor = 0.08;
+      currentX.current += (targetX.current - currentX.current) * lerpFactor;
+      
+      if (sliderRef.current) {
+        gsap.set(sliderRef.current, { x: `-${currentX.current}vw` });
+      }
+    };
+
+    gsap.ticker.add(tick);
+    return () => gsap.ticker.remove(tick);
+  });
 
   return (
     <Routes>
