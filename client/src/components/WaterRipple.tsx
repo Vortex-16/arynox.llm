@@ -392,6 +392,11 @@ const WaterRipple: React.FC<WaterRippleProps> = ({
     resize();
     window.addEventListener("resize", resize);
 
+    // Re-draw once fonts are ready to ensure 'Gabarito' is properly rendered on canvas
+    document.fonts.ready.then(() => {
+      updateContentTexture();
+    });
+
     // --- Params ---
     const damping = 0.96 + viscosity * 0.035;
     const mouseRadius = 0.05 + strength * 0.05;

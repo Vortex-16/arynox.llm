@@ -28,34 +28,43 @@ function App() {
           />
 
           {/* Navigation Links (floats above the ripple canvas) */}
+          {/* Navigation (Simplified - Login/Sign Up moved to center) */}
           <nav className="absolute top-8 right-8 flex items-center gap-6 z-20">
-            <Link 
-              to="/teacher" 
-              className="text-[#F0E0E0]/80 hover:text-white transition-colors font-medium text-sm"
-            >
-              Teacher Hub
-            </Link>
-            <Link 
-              to="/student" 
-              className="text-[#F0E0E0]/80 hover:text-white transition-colors font-medium text-sm"
-            >
-              Student Chat
-            </Link>
-            <div className="flex items-center gap-3 ml-2">
-                <Link 
-                  to="/login" 
-                  className="px-5 py-2 rounded-full border border-[#F0E0E0]/30 text-[#F0E0E0] hover:bg-[#F0E0E0] hover:text-[#FF5458] transition-all font-semibold text-sm"
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/signup" 
-                  className="px-5 py-2 rounded-full bg-[#F0E0E0] text-[#FF5458] shadow-sm hover:bg-white hover:scale-[1.02] transition-all font-semibold text-sm"
-                >
-                  Sign Up
-                </Link>
-            </div>
+            {/* Dashboard links hidden for now */}
           </nav>
+
+          {/* New Non-Rippled Text Overlay */}
+          <div 
+            className="absolute z-50 pointer-events-none select-none text-center font-extrabold text-[#F0E0E0] 
+                       -translate-x-1/2 -translate-y-1/2
+                       /* Mobile */    left-[50%] top-[35%] w-[309px] text-[16px] leading-[23px]
+                       /* Tablet */    md:left-[50%] md:top-[45%] md:w-[750px] md:text-[38px] md:leading-[50px]
+                       /* Desktop */   lg:left-[50%] lg:top-[53%] lg:w-[862px] lg:text-[51px] lg:leading-[55px]"
+          >
+            Leverage AI to grow your <br className="hidden md:block lg:hidden" /> knowledge and study immersively.
+          </div>
+
+          {/* Centered Auth Buttons */}
+          <div 
+            className="absolute z-50 flex items-center gap-4
+                       -translate-x-1/2 -translate-y-1/2
+                       /* Mobile */    left-[50%] top-[48%]
+                       /* Tablet */    md:left-[50%] md:top-[58%]
+                       /* Desktop */   lg:left-[50%] lg:top-[66%]"
+          >
+              <Link 
+                to="/login" 
+                className="px-8 py-3 rounded-full border border-[#F0E0E0]/30 text-[#F0E0E0] hover:bg-[#F0E0E0] hover:text-[#FF5458] transition-all font-bold text-[15px] shadow-lg backdrop-blur-sm"
+              >
+                Login
+              </Link>
+              <Link 
+                to="/signup" 
+                className="px-6 py-3 md:px-8 rounded-full bg-[#F0E0E0] text-[#FF5458] shadow-xl hover:bg-white hover:scale-[1.05] transition-all font-bold text-[15px] whitespace-nowrap"
+              >
+                Sign Up
+              </Link>
+          </div>
         </main>
       } />
       <Route path="/login" element={<LoginPage />} />
