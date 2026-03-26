@@ -32,10 +32,12 @@ mongoose
   .connect(MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
   })
   .catch((err) => {
-    console.error('MongoDB connection error:', err);
+    console.warn('\x1b[33m%s\x1b[0m', '⚠️ MongoDB connection failed. Are you missing the Atlas URI in your .env?');
+    console.warn('\x1b[33m%s\x1b[0m', 'Server is running in degraded mode (Analytics/Logs will fail, but RAG parsing will work).');
   });
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

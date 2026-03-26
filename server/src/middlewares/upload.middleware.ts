@@ -1,11 +1,16 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 
 // Define storage for uploaded files
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // We will save uploaded materials to a temporary 'uploads' directory
-    cb(null, 'uploads/');
+    const dir = 'uploads/';
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
     // Generate a unique file name

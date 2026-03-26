@@ -2,13 +2,16 @@ import fs from 'fs';
 const pdfParse = require('pdf-parse');
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { addDocumentsToChroma } from './vectorstore.service';
-import { generateEmbeddingsMock } from './llm.service';
+import { generateEmbeddings } from './llm.service';
 
 /**
  * Extracts raw text from a PDF file using pdf-parse.
  */
 export const extractTextFromPDF = async (filePath: string): Promise<string> => {
     try {
+        if (filePath.toLowerCase().endsWith('.txt')) {
+             return fs.readFileSync(filePath, 'utf-8');
+        }
         const dataBuffer = fs.readFileSync(filePath);
         const data = await pdfParse(dataBuffer);
         return data.text;
@@ -39,8 +42,8 @@ export const processDocumentAndStore = async (text: string, title: string, colle
              chunkIndex: i
         }));
 
-        // Generate embeddings for the chunks
-        const embeddings = await generateEmbeddingsMock(chunks);
+        // Generate real embeddings via NVIDIA NIM API
+        const embeddings = await generateEmbeddings(chunks);
 
         // Store into Vector Database
         await addDocumentsToChroma(collectionName, ids, embeddings, chunks, metadatas);
