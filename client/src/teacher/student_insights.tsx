@@ -83,15 +83,32 @@ export default function StudentInsights() {
         }
     };
 
-    eventSource.onerror = (err) => {
-        console.error("[SSE] Connection error:", err);
-        eventSource.close();
+    eventSource.onerror = () => {
+        // EventSource auto-reconnects — don't close() or it disables reconnect
+        console.warn('[SSE] Connection error. EventSource will auto-reconnect...');
     };
 
     return () => {
         eventSource.close();
     };
   }, []);
+
+  const handleResolveDoubt = async (student: { studentId: string; topic: string }) => {
+    try {
+      await fetch('http://localhost:5000/api/analytics/resolve-doubt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: student.studentId, topic: student.topic })
+      });
+      // Immediately remove from UI
+      setStuckStudents(prev => prev.filter(s => !(s.studentId === student.studentId && s.topic === student.topic)));
+      if (selectedStuck?.studentId === student.studentId && selectedStuck?.topic === student.topic) {
+        setSelectedStuck(null);
+      }
+    } catch (err) {
+      console.error('Failed to resolve doubt:', err);
+    }
+  };
 
   const handleTeacherRespond = async () => {
     if (!selectedStuck || !teacherMessage.trim()) return;
@@ -107,8 +124,8 @@ export default function StudentInsights() {
         })
       });
       if (res.ok) {
-        const key = `${selectedStuck.studentId}_${selectedStuck.topic}`;
-        setRespondedIds(prev => new Set(prev).add(key));
+        // Mark the doubt as resolved — removes card from teacher's list
+        await handleResolveDoubt({ studentId: selectedStuck.studentId, topic: selectedStuck.topic });
         setTeacherMessage('');
       }
     } catch (err) {

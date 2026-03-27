@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAnalyticsData, getStudentsAcademicDetails, generateStudentReportPDF, getStuckStudents, teacherRespond } from '../controllers/analytics.controller';
+import { getAnalyticsData, getStudentsAcademicDetails, generateStudentReportPDF, getStuckStudents, teacherRespond, resolveDoubt } from '../controllers/analytics.controller';
 
 const router = Router();
 
@@ -9,5 +9,6 @@ router.get('/students', getStudentsAcademicDetails);
 router.get('/students/:studentId/report', generateStudentReportPDF);
 router.get('/stuck-students', getStuckStudents);
 router.post('/teacher-respond', teacherRespond);
+router.post('/resolve-doubt', resolveDoubt);
 
 export default router;

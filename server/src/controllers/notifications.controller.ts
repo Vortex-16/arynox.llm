@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
 
 // In-memory store of connected clients
-// Key structure: `teacher_${id}` or `student_${id}`
-const clients = new Map<string, Response>();
+// Key: `teacher_${timestamp}` (multiple teachers) or `student_${studentId}`
+const clients = new Map<string, { res: Response; heartbeat: NodeJS.Timeout }>();
 
 /**
  * SSE Stream Endpoint
- * Clients connect to this to receive real-time push notifications.
- * Expected query params: ?role=teacher or ?role=student&studentId=...
+ * Clients connect here to receive real-time push notifications.
+ * Query params: ?role=teacher  OR  ?role=student&studentId=...
  */
 export const streamNotifications = (req: Request, res: Response) => {
     const { role, studentId } = req.query;
@@ -17,56 +17,63 @@ export const streamNotifications = (req: Request, res: Response) => {
         return;
     }
 
-    // Generate a unique connection ID
-    const connId = role === 'teacher' 
-        ? `teacher_${Date.now()}` // Allow multiple teachers to connect
+    const connId = role === 'teacher'
+        ? `teacher_${Date.now()}`
         : `student_${studentId}`;
 
-    // Set headers for Server-Sent Events
+    // ─── SSE Headers ────────────────────────────────────────────────────────
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Prevent nginx from buffering
+    // Explicit CORS for the SSE stream (cors() middleware doesn't cover this)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
 
-    // Flush initial connection message
+    // Flush headers immediately so the browser know the SSE connection is open
+    res.flushHeaders();
+
+    // Send the initial connected event
     res.write(`data: ${JSON.stringify({ type: 'CONNECTED', message: `Connected as ${role}` })}\n\n`);
 
-    // Store the connection
-    clients.set(connId, res);
-    console.log(`[SSE] Client connected: ${connId}. Total active connections: ${clients.size}`);
+    // ─── Keep-Alive Heartbeat (every 25s) ───────────────────────────────────
+    // Prevents proxies and browsers from closing the idle connection
+    const heartbeat = setInterval(() => {
+        res.write(': heartbeat\n\n'); // SSE comment — ignored by clients but keeps TCP alive
+    }, 25000);
 
-    // Handle client disconnect
+    clients.set(connId, { res, heartbeat });
+    console.log(`[SSE] Client connected: ${connId}. Total connections: ${clients.size}`);
+
+    // ─── Cleanup on disconnect ───────────────────────────────────────────────
     req.on('close', () => {
+        clearInterval(heartbeat);
         clients.delete(connId);
-        console.log(`[SSE] Client disconnected: ${connId}. Total active connections: ${clients.size}`);
+        console.log(`[SSE] Client disconnected: ${connId}. Remaining: ${clients.size}`);
     });
 };
 
-/**
- * Sends a notification to all connected teachers
- */
+/** Push a notification to ALL connected teachers */
 export const notifyTeacher = (payload: any) => {
     let sentCount = 0;
-    for (const [key, res] of clients.entries()) {
+    for (const [key, client] of clients.entries()) {
         if (key.startsWith('teacher_')) {
-            res.write(`data: ${JSON.stringify(payload)}\n\n`);
-            // We need to compress/flush if behind proxy, but standard express write is usually fine
+            client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
             sentCount++;
         }
     }
-    console.log(`[SSE] Broadcasted STUCK_STUDENT alert to ${sentCount} teacher(s).`);
+    console.log(`[SSE] Broadcasted to ${sentCount} teacher(s):`, payload.type);
 };
 
-/**
- * Sends a notification to a specific connected student
- */
+/** Push a notification to a specific student */
 export const notifyStudent = (studentId: string, payload: any) => {
     const key = `student_${studentId}`;
-    const res = clients.get(key);
-    
-    if (res) {
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
-        console.log(`[SSE] Sent TEACHER_REPLY alert to student ${studentId}.`);
+    const client = clients.get(key);
+
+    if (client) {
+        client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
+        console.log(`[SSE] Sent to student ${studentId}:`, payload.type);
     } else {
-        console.log(`[SSE] Student ${studentId} not currently connected for real-time alert.`);
+        console.log(`[SSE] Student ${studentId} not connected — skipping real-time alert.`);
     }
 };

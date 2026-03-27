@@ -7,6 +7,7 @@ import './index.css';
 
 export default function App() {
     const navigate = useNavigate();
+    const containerRef = useRef(null);
     const [isLoading, setIsLoading] = useState(false);
     const [slideIndex, setSlideIndex] = useState(0);
 
