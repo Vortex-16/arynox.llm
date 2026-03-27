@@ -38,7 +38,7 @@ export default function Notebook() {
     const studentProfile = {
         id: 'student_123',
         className: '2nd Year',
-        department: 'CSE'
+        department: 'Computer Science'
     };
 
     const fetchSessions = async () => {
@@ -57,12 +57,12 @@ export default function Notebook() {
                 const res = await fetch(`http://localhost:5000/api/documents?className=${encodeURIComponent(studentProfile.className)}&department=${encodeURIComponent(studentProfile.department)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    const mappedSources = data.map((doc: any) => ({
+                    const mappedSources = data.map((doc: any, index: number) => ({
                         id: doc._id,
                         name: doc.title,
                         wordCount: 'Processed File',
-                        // Select by default if it was the one clicked from the dashboard, else first 3
-                        selected: targetDocId ? doc._id === targetDocId : true
+                        // Strictly select ONLY the clicked doc if provided, otherwise select first 3
+                        selected: targetDocId ? (doc._id.toString() === targetDocId.toString()) : index < 3
                     }));
                     setSources(mappedSources);
                     
@@ -150,7 +150,8 @@ export default function Notebook() {
                     department: studentProfile.department,
                     className: studentProfile.className,
                     studentId: studentProfile.id,
-                    sessionId: sessionId
+                    sessionId: sessionId,
+                    sourceIds: sources.filter(s => s.selected).map(s => s.id)
                 })
             });
 
@@ -185,13 +186,13 @@ export default function Notebook() {
     return (
         <div className="flex h-screen w-full bg-[#131314] text-[#e3e3e3] overflow-hidden font-sans">
             {/* 1. Left Sidebar (Sources Panel) */}
-            <aside className="w-[320px] flex flex-col bg-[#1e1f20] shrink-0 border-r border-[#444746]/50 shadow-sm z-20">
-                <div className="p-5 flex flex-col gap-4">
-                    <Link to="/student" className="flex items-center gap-2 text-[#c4c7c5] hover:text-[#e3e3e3] transition-colors text-sm w-fit font-medium">
+            <aside className="w-[280px] md:w-[320px] flex flex-col bg-[#1e1f20] shrink-0 border-r border-[#444746]/50 shadow-xl z-20 transition-all duration-300">
+                <div className="p-5 flex flex-col gap-4 sticky top-0 bg-[#1e1f20]/95 backdrop-blur-md z-30 border-b border-white/5">
+                    <Link to="/student" className="flex items-center gap-2 text-[#c4c7c5] hover:text-[#a8c7fa] transition-all text-sm w-fit font-medium hover:translate-x-[-4px]">
                         <ArrowLeft className="w-4 h-4" /> Back to Student Dashboard
                     </Link>
                     <div className="flex items-center justify-between mt-2">
-                        <h1 className="text-[22px] font-medium text-[#e3e3e3]">Advanced Physics 101</h1>
+                        <h1 className="text-[20px] font-semibold text-[#e3e3e3] tracking-tight truncate">{studentProfile.department} Portal</h1>
                     </div>
                 </div>
 
@@ -272,10 +273,13 @@ export default function Notebook() {
             </aside>
 
             {/* 2. Main Studio Area */}
-            <main className="flex-1 flex flex-col relative bg-[#131314] overflow-hidden">
+            <main className="flex-1 flex flex-col relative bg-[#131314] overflow-hidden mesh-gradient">
                 {/* Navbar */}
-                <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-[#131314]/95 backdrop-blur-sm z-20">
-                    <h2 className="text-[15px] font-medium text-[#e3e3e3]">Notebook guide</h2>
+                <div className="px-6 py-4 flex items-center justify-between z-40 glass-header shrink-0">
+                    <h2 className="text-[15px] font-medium text-[#e3e3e3] flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        arynox.llm Guide
+                    </h2>
                     <div className="flex items-center gap-2">
                         <button className="text-sm font-medium text-[#c4c7c5] hover:text-[#e3e3e3] px-4 py-2 rounded-full hover:bg-[#282a2c] transition-colors flex items-center gap-2">
                             <Share2 className="w-4 h-4" />
@@ -287,7 +291,7 @@ export default function Notebook() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 md:px-12 lg:px-24 py-4 flex flex-col scrollbar-hide">
+                <div className="flex-1 overflow-y-auto min-h-0 px-4 md:px-12 lg:px-24 py-4 flex flex-col pb-32 custom-scrollbar">
                     {/* Notebook Guide section */}
                     <div className="max-w-[800px] w-full mx-auto mb-10 border-b border-[#444746]/50 pb-12">
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -434,7 +438,7 @@ export default function Notebook() {
                             </button>
                         </form>
                         <div className="text-center text-[12px] text-[#8e918f] font-medium tracking-wide">
-                            NotebookLM clone may display inaccurate info, so double-check its responses.
+                            **arynox.llm** may display inaccurate info, so double-check its responses.
                         </div>
                     </div>
                 </div>

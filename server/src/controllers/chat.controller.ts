@@ -1,13 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { queryCollection } from '../services/vectorstore.service';
-import { generateQueryEmbedding, getChatModel, getFallbackChatModel, SOCRATIC_SYSTEM_PROMPT } from '../services/llm.service';
+import { generateQueryEmbedding, getChatModel, getFallbackChatModel, SOCRATIC_SYSTEM_PROMPT, extractTopic } from '../services/llm.service';
 import QueryLog from '../models/QueryLog';
 import ChatSession from '../models/ChatSession';
+import SystemSetting from '../models/SystemSetting';
+import DocumentMeta from '../models/DocumentMeta';
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 
 export const askChat = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const { query, department, studentId, sessionId, className } = req.body;
+        const { query, department, studentId, sessionId, className, sourceIds } = req.body;
         if (!query) {
              res.status(400).json({ error: 'Query is required.' });
              return;
@@ -66,16 +68,55 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
             return;
         }
 
+        // Fetch Faculty Settings (Is Exam Mode active?)
+        const settings = await SystemSetting.findOne({ department: department || 'General' });
+        const isExamMode = settings?.isExamMode || false;
+        const aiStrictness = settings?.aiStrictness || 'SOCRATIC';
+        const confidenceThreshold = settings?.confidenceThreshold || 0.45;
+
         // -----------------------------------------------------
-        // 2. VECTOR DATABASE RETRIEVAL
+        // 2. VECTOR DATABASE RETRIEVAL (Isolated by Department)
         // -----------------------------------------------------
+        // Mapping sourceIds to titles for vector filtering
+        let sourceFilter: any = null;
+        if (sourceIds && Array.isArray(sourceIds) && sourceIds.length > 0) {
+            const docs = await DocumentMeta.find({ _id: { $in: sourceIds } });
+            const titles = docs.map(d => d.title);
+            if (titles.length > 0) {
+                // Combine department isolation with specific source selection
+                sourceFilter = {
+                    "$and": [
+                        { "department": { "$eq": department || 'General' } },
+                        { "source": { "$in": titles } }
+                    ]
+                };
+            }
+        }
+
+        if (!sourceFilter) {
+            sourceFilter = department ? { department: { "$eq": department } } : null;
+        }
+
         const queryVec = await generateQueryEmbedding(query);
-        const searchResults = await queryCollection(chromaCollectionName, [queryVec], 5);
+        const searchResults = await queryCollection(
+            chromaCollectionName, 
+            [queryVec], 
+            10, // Increased results for better filtering context
+            sourceFilter
+        );
+        
+        // -----------------------------------------------------
+        // 3. CONFIDENCE-BASED FILTERING
+        // -----------------------------------------------------
+        const distances = searchResults?.distances?.[0] || [];
+        // Smaller distance means higher confidence (Cosine similarity in Chroma).
+        const bestDistance = distances.length > 0 ? Math.min(...distances) : 100;
+        const isConfident = bestDistance < confidenceThreshold;
         
         let contextBlock = "";
         let hasContext = false;
         
-        if (searchResults?.documents?.[0]?.length > 0) {
+        if (searchResults?.documents?.[0]?.length > 0 && isConfident) {
             const docs = searchResults.documents[0];
             const mets = searchResults.metadatas[0] || [];
             
@@ -85,24 +126,39 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
                 hasContext = true;
                 contextBlock = validDocs.map((doc: string, index: number) => {
                     const meta = mets[index] as any;
-                    const source = meta?.source ? `[Source: ${meta.source}]` : '';
+                    const pageInfo = meta?.page ? `, Page: ${meta.page}` : '';
+                    const source = meta?.source ? `[Source: ${meta.source}${pageInfo}]` : '';
                     return `Chunk ${index + 1} ${source}:\n${doc}`;
                 }).join('\n\n');
             }
         }
 
         // -----------------------------------------------------
-        // 3. SOCRATIC RAG WITH CONVERSATIONAL MEMORY
+        // 4. SOCRATIC RAG WITH DYNAMIC SCOPE (Exam Mode)
         // -----------------------------------------------------
-        let systemPromptText: string;
+        let systemPromptText: string = SOCRATIC_SYSTEM_PROMPT;
+
+        // Adjust for AI Strictness / Exam Mode
+        if (isExamMode || aiStrictness === 'HINTS_ONLY') {
+            systemPromptText += `
+\n[EXAM MODE ACTIVE] 
+- You are strictly prohibited from providing any conceptual explanations or answers.
+- You can ONLY respond with hints, Socratic questions, or pointing the student towards a specific source location.
+- If the student asks for a concept overview, say: "I'm in Exam Mode. I can only provide hints to help you reach the conclusion yourself."
+`;
+        }
 
         if (hasContext) {
-            systemPromptText = `${SOCRATIC_SYSTEM_PROMPT}\n\nRelevant Context from Uploaded Materials:\n${contextBlock}`;
+            systemPromptText += `\n\nRelevant Context from Uploaded Materials:\n${contextBlock}`;
         } else {
-            // No matching content found — tell AI to do a general academic explanation
-            systemPromptText = `You are an expert AI academic tutor. The student asked a question, but no matching content was found in the uploaded course materials.\n
-Your job is to:\n1. Clearly explain the topic based on your broad academic knowledge.\n2. Keep the explanation simple, friendly, and well-structured for a college student.\n3. At the END of your response, add this exact line: "\n\n📌 *Note: This answer is based on general knowledge. Your professor's materials may cover this differently. Faculty response will be available soon.*"`;
+            // STRICT REFUSAL: No matching content or low confidence
+            const refusalReason = !isConfident && searchResults?.documents?.[0]?.length > 0
+                ? "the available material is not specific enough to answer your question confidently"
+                : "no matching matching content was found in the uploaded course materials";
+            
+            systemPromptText += `\n\n[IMPORTANT] Refusal Mode Triggered: Because ${refusalReason}, you MUST politely refuse to answer. Suggest that the student reviews their notes or contacts the professor.`;
         }
+
         const systemMessage = new SystemMessage(systemPromptText);
         
         const pastMessages = session.messages.map(m => 
@@ -131,7 +187,7 @@ Your job is to:\n1. Clearly explain the topic based on your broad academic knowl
         }
 
         // -----------------------------------------------------
-        // 4. STORAGE LOGIC & TEACHER FORWARDING
+        // 5. STORAGE LOGIC & TEACHER FORWARDING
         // -----------------------------------------------------
         
         // Save to Chat Session Memory
@@ -149,11 +205,14 @@ Your job is to:\n1. Clearly explain the topic based on your broad academic knowl
             rawAnswer += "\n\n*(Note: I couldn't verify this in the uploaded materials, so I've forwarded this question to your professor for review.)*";
         }
 
+        const extractedTopic = await extractTopic(query);
+
         const log = new QueryLog({
              sessionId: activeSessionId,
              studentId,
              query,
              response: rawAnswer,
+             topic: extractedTopic,
              department: department || 'General',
              status: statusToLog,
              forwardedToTeacher: forwarded

@@ -50,14 +50,19 @@ export const addDocumentsToChroma = async (
 export const queryCollection = async (
     collectionName: string,
     queryEmbeddings: number[][],
-    nResults: number = 5
+    nResults: number = 5,
+    where: any = null // Standard Chroma metadata filter object
 ) => {
     const colId = await getCollectionId(collectionName);
-    const res = await axios.post(`${API_BASE}/${colId}/query`, {
+    const body: any = {
         query_embeddings: queryEmbeddings,
         n_results: nResults,
         include: ['documents', 'metadatas', 'distances']
-    });
+    };
+    if (where) {
+        body.where = where;
+    }
+    const res = await axios.post(`${API_BASE}/${colId}/query`, body);
     return res.data;
 };
 

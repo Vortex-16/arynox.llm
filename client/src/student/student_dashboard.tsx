@@ -7,10 +7,19 @@ export default function StudentAnalyticsDashboard() {
     const [documents, setDocuments] = useState<any[]>([]);
     const [isLoadingDocs, setIsLoadingDocs] = useState(true);
 
+    const studentProfile = {
+        id: 'student_123',
+        name: 'Rajdeep Seal',
+        className: '2nd Year',
+        department: 'Computer Science'
+    };
+
     useEffect(() => {
         const fetchDocs = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/documents');
+                // Unified filtering with Department Isolation logic
+                const url = `http://localhost:5000/api/documents?className=${encodeURIComponent(studentProfile.className)}&department=${encodeURIComponent(studentProfile.department)}`;
+                const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     setDocuments(data);
@@ -25,9 +34,9 @@ export default function StudentAnalyticsDashboard() {
     }, []);
 
     return (
-        <div className="min-h-screen w-full bg-[#0a0a0a] text-white font-sans selection:bg-amber-500/30">
+        <div className="h-screen w-full bg-[#0a0a0a] text-white font-sans selection:bg-amber-500/30 flex flex-col overflow-hidden">
             {/* Top Navigation */}
-            <nav className="border-b border-white/10 bg-[#0b0b0b] sticky top-0 z-50">
+            <nav className="border-b border-white/10 bg-[#0b0b0b] shrink-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <BrainCircuit className="w-6 h-6 text-amber-500" />
@@ -43,7 +52,8 @@ export default function StudentAnalyticsDashboard() {
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto px-6 py-12">
+            <main className="flex-1 overflow-y-auto min-h-0 custom-scrollbar mesh-gradient">
+                <div className="max-w-7xl mx-auto px-6 py-12">
                 {/* Header Section */}
                 <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
@@ -51,7 +61,7 @@ export default function StudentAnalyticsDashboard() {
                         <p className="text-white/50">Here is your learning overview for this week.</p>
                     </div>
                     <Link to="/student/notebook" className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-full transition-all flex items-center gap-2 w-fit">
-                        Open Notebook LM <ChevronRight className="w-4 h-4" />
+                        Open arynox.llm <ChevronRight className="w-4 h-4" />
                     </Link>
                 </div>
 
@@ -142,7 +152,7 @@ export default function StudentAnalyticsDashboard() {
                                     </div>
                                 ) : (
                                     <>
-                                        {documents.slice(0, 3).map((doc: any) => (
+                                        {documents.slice(0, 3).map((doc: any, index: number) => (
                                             <Link key={doc._id} to={`/student/notebook?docId=${doc._id}&name=${encodeURIComponent(doc.title)}`} className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-white/20 hover:bg-white/[0.02] transition-all group cursor-pointer block hover:shadow-[0_8px_30px_rgba(245,158,11,0.05)]">
                                                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                                     <FileText className="w-5 h-5 text-amber-500" />
@@ -187,6 +197,7 @@ export default function StudentAnalyticsDashboard() {
                             ))}
                         </div>
                     </div>
+                </div>
                 </div>
             </main>
         </div>

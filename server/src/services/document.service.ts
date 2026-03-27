@@ -17,7 +17,7 @@ const extractTextLayer = (filePath: string): Promise<string> => {
             try {
                 const raw: string = parser.getRawTextContent();
                 const cleaned = raw
-                    .replace(/----------------Page \(\d+\) Break----------------/g, '\n')
+                    .replace(/----------------Page \((\d+)\) Break----------------/g, '\n--- PAGE $1 ---\n')
                     .replace(/\n{3,}/g, '\n\n').trim();
                 resolve(cleaned);
             } catch { resolve(''); }
@@ -118,6 +118,9 @@ export const processDocumentAndStore = async (
         const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40);
         const uploadId = `${safeTitle}_${Date.now()}`;
 
+        const pageSegments = text.split(/--- PAGE (\d+) ---\n/);
+        let currentPageIndex = 0; // Default to 1 if no markers found
+
         for (let i = 0; i < chunks.length; i += 50) {
             const batch = chunks.slice(i, i + 50);
             const embeddings: number[][] = [];
@@ -129,15 +132,31 @@ export const processDocumentAndStore = async (
             }
 
             const ids = batch.map((_, idx) => `${uploadId}_chunk_${i + idx}`);
-            const metas = batch.map((_, idx) => ({
-                source: title, chunkIndex: i + idx,
-                className: meta.className || 'Global',
-                department: meta.department || 'Global',
-                subject: meta.subject || '', module: meta.module || ''
-            }));
+            
+            const metas = batch.map((chunkText, idx) => {
+                // Determine which page this chunk likely belongs to
+                let assignedPage = 1;
+                // Simple heuristic: find the first match of the chunk text in the full text
+                // and see which page marker precedes it.
+                // For the seed script, we'll use a safer regex-based approach.
+                const match = text.match(new RegExp(`--- PAGE (\\d+) ---[\\s\\S]*?${chunkText.substring(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'));
+                if (match && match[1]) {
+                    assignedPage = parseInt(match[1]);
+                }
+
+                return {
+                    source: title, 
+                    chunkIndex: i + idx,
+                    page: assignedPage,
+                    className: meta.className || 'Global',
+                    department: meta.department || 'Global',
+                    subject: meta.subject || '', 
+                    module: meta.module || ''
+                };
+            });
 
             await addDocumentsToChroma(collectionName, ids, embeddings, batch, metas);
-            console.log(`[DocumentService] Stored ${Math.min(i + 50, chunks.length)}/${chunks.length} chunks`);
+            console.log(`[DocumentService] Stored ${Math.min(i + 50, chunks.length)}/${chunks.length} chunks (Page tagged)`);
         }
 
         console.log(`[DocumentService] ✅ Done: "${title}"`);

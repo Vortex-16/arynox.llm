@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   UploadCloud, FileText, CheckCircle, Clock, Loader2, Database, LayoutDashboard, 
-  Settings, LogOut, Search, BarChart3, Trash2
+  Settings, LogOut, Search, BarChart3, Trash2, Users
 } from 'lucide-react';
 import StudentInsights from './student_insights';
 
 // Simulated states for processing pipeline
 type DocState = 'uploading' | 'parsing' | 'chunking' | 'embedding' | 'ready' | 'error';
-type TabState = 'onboarding' | 'insights';
+type TabState = 'onboarding' | 'insights' | 'settings' | 'classes';
 
 interface DocumentFile {
   id: string;
@@ -36,6 +36,10 @@ export default function TeacherDashboard() {
     module: ''
   });
 
+  // Settings State
+  const [isExamMode, setIsExamMode] = useState(false);
+  const [confidenceThreshold, setConfidenceThreshold] = useState(0.45);
+
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
@@ -55,7 +59,35 @@ export default function TeacherDashboard() {
       }
     };
     fetchDocuments();
+
+    // Fetch Initial Settings
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/settings?department=CSE');
+        const data = await res.json();
+        setIsExamMode(data.isExamMode);
+        setConfidenceThreshold(data.confidenceThreshold);
+      } catch (err) {}
+    };
+    fetchSettings();
   }, []);
+
+  const updateBackendSettings = async (updates: any) => {
+    try {
+        await fetch('http://localhost:5000/api/settings/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                department: 'CSE', // Hardcoded for demo/MVP
+                isExamMode,
+                confidenceThreshold,
+                ...updates
+            })
+        });
+    } catch (err) {
+        console.error("Failed to update settings", err);
+    }
+  };
 
   const uploadToBackend = async (docId: string, file: File, meta: typeof uploadMetadata) => {
     // Start Animation Sequence
@@ -183,7 +215,7 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#0a0a0a] text-white overflow-hidden font-['Outfit']">
+    <div className="flex h-screen w-full bg-[#131314] text-white overflow-hidden font-['Outfit'] mesh-gradient">
       
       {/* Upload Metadata Modal */}
       {showMetadataModal && (
@@ -263,7 +295,7 @@ export default function TeacherDashboard() {
       )}
       
       {/* Sidebar Glassmorphism */}
-      <aside className="w-64 flex flex-col justify-between py-8 px-6 border-r border-white/5 bg-white/5 backdrop-blur-2xl shadow-[0_0_40px_rgba(124,58,237,0.05)] z-20">
+      <aside className="w-64 flex flex-col justify-between py-8 px-6 border-r border-white/5 bg-[#1e1f20]/50 backdrop-blur-2xl shadow-2xl z-20">
         <div>
           <div className="flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-red-500 flex items-center justify-center font-bold text-xl shadow-[0_0_20px_rgba(124,58,237,0.5)]">
@@ -295,13 +327,27 @@ export default function TeacherDashboard() {
               <BarChart3 className="w-5 h-5" />
               Student Insights
             </button>
-            <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/50 hover:bg-white/5 hover:text-white transition-all border border-transparent">
+            <button 
+              onClick={() => setActiveTab('classes')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                activeTab === 'classes' 
+                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+              }`}
+            >
               <LayoutDashboard className="w-5 h-5" />
               Classes Overview
             </button>
-            <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/50 hover:bg-white/5 hover:text-white transition-all border border-transparent">
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                activeTab === 'settings' 
+                ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+              }`}
+            >
               <Settings className="w-5 h-5" />
-              Settings
+              AI Controls
             </button>
           </nav>
         </div>
@@ -312,17 +358,10 @@ export default function TeacherDashboard() {
         </button>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative overflow-y-auto scrollbar-hide">
+      {/* 2. Main Studio Area */}
+      <main className="flex-1 flex flex-col relative bg-[#131314] overflow-y-auto mesh-gradient">
         
-        {/* Dynamic Background Gradients */}
-        <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none z-0" />
-        <div className="absolute -top-[300px] -right-[200px] w-[600px] h-[600px] bg-violet-600/10 blur-[150px] rounded-full pointer-events-none z-0" />
-        {activeTab === 'insights' && (
-          <div className="absolute top-[200px] -left-[200px] w-[500px] h-[500px] bg-amber-600/10 blur-[120px] rounded-full pointer-events-none z-0" />
-        )}
-        
-        <header className="px-10 py-8 flex justify-between items-center z-10 sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md">
+        <header className="px-10 py-8 flex justify-between items-center z-40 sticky top-0 glass-header">
           <div>
             <h2 className="text-3xl font-semibold mb-1">
               {activeTab === 'onboarding' ? 'Faculty Hub' : 'Analytics & Insights'}
@@ -462,6 +501,75 @@ export default function TeacherDashboard() {
           {/* ======================= */}
           {activeTab === 'insights' && (
             <StudentInsights />
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl">
+                <section className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+                    <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+                        <Settings className="text-red-400" />
+                        Pedagogical Controls
+                    </h3>
+                    
+                    <div className="space-y-8">
+                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <div>
+                                <h4 className="font-semibold text-white/90">Exam Mode (Strict Socratic)</h4>
+                                <p className="text-sm text-white/40">AI will refuse to give direct answers and only provide hints.</p>
+                            </div>
+                            <button 
+                                onClick={async () => {
+                                    const newVal = !isExamMode;
+                                    setIsExamMode(newVal);
+                                    await updateBackendSettings({ isExamMode: newVal });
+                                }}
+                                className={`w-14 h-8 rounded-full transition-all relative ${isExamMode ? 'bg-red-500' : 'bg-white/10'}`}
+                            >
+                                <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isExamMode ? 'left-7' : 'left-1'}`} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <h4 className="font-semibold text-white/90 mb-2">AI Scope Confidence</h4>
+                            <p className="text-xs text-white/30 mb-4">Minimum retrieval confidence required before the AI attempts an answer.</p>
+                            <input 
+                                type="range" min="0.1" max="0.9" step="0.05" 
+                                value={confidenceThreshold}
+                                onChange={(e) => setConfidenceThreshold(parseFloat(e.target.value))}
+                                onMouseUp={() => updateBackendSettings({ confidenceThreshold })}
+                                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-red-400"
+                            />
+                            <div className="flex justify-between text-[10px] text-white/20 mt-2">
+                                <span>High Sensitivity (0.1)</span>
+                                <span className="text-red-400 font-bold">{confidenceThreshold}</span>
+                                <span>Strict (0.9)</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+          )}
+
+          {activeTab === 'classes' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {['1st Year (CSE)', '2nd Year (CSE)', '3rd Year (CSE)', '4th Year (CSE)', '2nd Year (ECE)'].map((cls) => (
+                        <div key={cls} className="p-8 rounded-3xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] transition-all group cursor-pointer-all">
+                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <Users className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold mb-2">{cls}</h3>
+                            <div className="flex items-center justify-between text-sm text-white/40">
+                                <span>65 Students</span>
+                                <span>12 Materials</span>
+                            </div>
+                            <div className="mt-6 pt-6 border-t border-white/5 flex gap-2">
+                                <div className="h-1.5 flex-1 rounded-full bg-blue-500/20"><div className="h-full w-[85%] bg-blue-500 rounded-full" /></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
           )}
 
         </div>

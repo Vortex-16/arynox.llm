@@ -12,11 +12,84 @@ body,
   scroll-behavior: smooth;
 }
 
-@media (min-width: 1024px) {
-  html, body, #root, * {
-    cursor: none !important;
-  }
+/* Premium UI Utilities */
+.glass-header {
+  @apply backdrop-blur-md bg-[#131314]/80 border-b border-white/5;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
+
+.mesh-gradient {
+  background-color: #131314;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(225,39%,30%,0.1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(339,49%,30%,0.1) 0, transparent 50%);
+}
+
+/* Custom Scrollbars (Apple Style) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Global Interactivity */
+button, 
+a, 
+[role="button"],
+.cursor-pointer-all * {
+  cursor: pointer !important;
+}
+
+input, textarea {
+  cursor: text;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* Removed cursor: none media query to restore native pointers */
 
 @keyframes grain {
   0%, 100% { transform:translate(0, 0) }

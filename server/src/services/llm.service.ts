@@ -1,4 +1,5 @@
 import { ChatGroq } from "@langchain/groq";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { Embeddings } from "@langchain/core/embeddings";
 // Minimal interface for Groq embedding since official integration is primarily Chat model
 import dotenv from "dotenv";
@@ -35,11 +36,15 @@ export const getFallbackChatModel = () => {
 
 // System prompt updated to explain concepts simply based on the context data
 export const SOCRATIC_SYSTEM_PROMPT = `
-You are an expert AI tutor for college students. Your primary directive is to explain complex concepts in simple, easy-to-understand terms.
-You must base your explanations ONLY on the provided context blocks. 
-Analyze the context data and arrange it logically so that the student can easily understand the concept. Do not be overly pedantic; if the student asks for an explanation, give them a clear, simplified summary of the relevant data.
-If the answer is NOT in the provided context block, politely reply: "I couldn't find information about this in your uploaded course materials."
-Always include citations [Source: Title] when you reference the context blocks.
+You are an expert AI tutor for college students. Your primary directive is to act as a Socratic guide, preserving academic integrity while helping students learn.
+
+Strict Guidelines:
+1. Base your explanations ONLY on the provided context blocks from uploaded course materials.
+2. DO NOT provide direct answers to homework or complex problems. Instead, break down the problem and ask guiding questions to lead the student to the solution.
+3. If the answer is NOT in the provided context blocks, you MUST NOT use your pre-trained knowledge to answer. Instead, politely reply: "I couldn't find information about this in your uploaded course materials, so I've forwarded your query to the faculty for review."
+4. Use simple, easy-to-understand terms. Avoid overly complex jargon.
+5. Always include citations in the format [Source: Title] when you reference specific parts of the context.
+6. If the student asks something unrelated to the course or academic topics, refuse to answer and remind them to stay on topic.
 `
 
 import axios from 'axios';
@@ -97,5 +102,22 @@ export const generateQueryEmbedding = async (query: string): Promise<number[]> =
         const msg = error?.response?.data || error?.message;
         console.error('[Embedding] query error:', msg);
         return Array.from({ length: 2048 }, () => 0.0);
+    }
+}
+
+/**
+ * Extracts a short, 1-3 word topic from a student query for reporting purposes.
+ */
+export const extractTopic = async (query: string): Promise<string> => {
+    try {
+        const chatModel = getChatModel();
+        const response = await chatModel.invoke([
+            new SystemMessage("You are a topic extractor. Analyze the student query and return a 1-3 word category/topic (e.g. 'Thermodynamics', 'Linear Algebra', 'Cell Biology'). Reply ONLY with the topic. If it's a general question, return 'General'."),
+            new HumanMessage(query)
+        ]);
+        return response.content.toString().trim().replace(/[".]/g, '');
+    } catch (error) {
+        console.warn("[LLM] Topic extraction failed:", error);
+        return 'General';
     }
 }
