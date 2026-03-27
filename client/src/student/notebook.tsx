@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MessageSquare, PlusCircle } from 'lucide-react';
+import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MessageSquare, PlusCircle, Pause, Play } from 'lucide-react';
+import blobVideo from '../assets/blob_gradient.mov';
 import { Link, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 
@@ -118,6 +119,11 @@ export default function Notebook() {
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [audioTranscript, setAudioTranscript] = useState<string | null>(null);
+    const [audioMode, setAudioMode] = useState<'premium' | 'free'>('free');
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const [sources, setSources] = useState<SourceDocument[]>([]);
@@ -208,13 +214,66 @@ export default function Notebook() {
         setSources((prev: SourceDocument[]) => prev.map((s: SourceDocument) => s.id === id ? { ...s, selected: !s.selected } : s));
     };
 
-    const simulateAudioGeneration = () => {
-        if (isGeneratingAudio) return;
+    const handleGenerateAudio = async () => {
+        const selectedIds = sources.filter(s => s.selected).map(s => s.id);
+        if (selectedIds.length === 0 || isGeneratingAudio) return;
+
         setIsGeneratingAudio(true);
-        setTimeout(() => {
+        setAudioUrl(null);
+        setAudioTranscript(null);
+
+        try {
+            const res = await fetch('http://localhost:5000/api/audio/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sourceIds: selectedIds,
+                    className: studentProfile.className,
+                    department: studentProfile.department
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Audio generation failed');
+            }
+
+            const data = await res.json();
+            setAudioTranscript(data.transcript);
+            setAudioMode(data.mode);
+
+            if (data.mode === 'premium' && data.audioUrl) {
+                setAudioUrl(data.audioUrl);
+                // Auto-play the premium audio using the ref
+                setTimeout(() => {
+                    if (audioRef.current) {
+                        // Reset and play
+                        audioRef.current.load();
+                        audioRef.current.play().catch(e => console.warn('Autoplay blocked:', e));
+                        setIsAudioPlaying(true);
+                    }
+                }, 200);
+            } else {
+                // Free mode: speak via browser TTS
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(data.transcript);
+                utterance.onstart = () => setIsAudioPlaying(true);
+                utterance.onend = () => setIsAudioPlaying(false);
+                const voices = window.speechSynthesis.getVoices();
+                const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
+                    || voices.find(v => v.lang.startsWith('en-US'))
+                    || voices[0];
+                if (preferred) utterance.voice = preferred;
+                utterance.rate = 0.95;
+                utterance.pitch = 1.05;
+                window.speechSynthesis.speak(utterance);
+            }
+        } catch (err: any) {
+            console.error('[Audio]', err);
+            alert(`Audio generation failed: ${err.message}`);
+        } finally {
             setIsGeneratingAudio(false);
-            // Mock completion
-        }, 4000);
+        }
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -400,17 +459,116 @@ export default function Notebook() {
                                      </div>
                                 </div>
                                 <button
-                                        onClick={simulateAudioGeneration}
+                                        onClick={handleGenerateAudio}
                                         disabled={isGeneratingAudio || selectedCount === 0}
                                         className="shrink-0 px-6 py-2.5 rounded-full bg-[#a8c7fa] hover:bg-[#b9d5ff] text-[#041e49] text-[14px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                 >
                                     {isGeneratingAudio ? (
                                         <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
                                     ) : (
-                                        'Generate'
+                                        audioUrl || audioTranscript ? '↺ Regenerate' : 'Generate'
                                     )}
                                 </button>
                             </div>
+
+                            {/* Audio Player — Premium Studio Experience */}
+                            {!isGeneratingAudio && (audioUrl || audioTranscript) && (
+                                <div className="col-span-1 md:col-span-2 relative overflow-hidden bg-[#1a1b1c]/80 backdrop-blur-3xl rounded-[32px] p-8 flex flex-col gap-6 border border-white/10 group shadow-2xl transition-all hover:scale-[1.01] hover:shadow-[#a8c7fa]/5">
+                                    
+                                    {/* Animated Video Background / Visualizer */}
+                                    <div className={`absolute inset-0 z-0 transition-opacity duration-1000 ${isAudioPlaying ? 'opacity-30' : 'opacity-0'}`}>
+                                        <video 
+                                            src={blobVideo} 
+                                            autoPlay 
+                                            loop 
+                                            muted 
+                                            playsInline 
+                                            className="w-full h-full object-cover scale-150 rotate-12 blur-2xl contrast-125 saturate-150"
+                                        />
+                                    </div>
+
+                                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 w-full">
+                                        <div className="flex items-center gap-5 w-full md:w-auto">
+                                            <div className="relative">
+                                                <div className={`absolute -inset-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur transition-all duration-500 ${isAudioPlaying ? 'opacity-40 animate-pulse' : 'opacity-0'}`} />
+                                                <div className="w-16 h-16 rounded-full bg-[#131415] border border-white/10 flex items-center justify-center relative shadow-inner overflow-hidden">
+                                                    {isAudioPlaying && (
+                                                        <div className="absolute inset-0 flex items-center justify-center gap-1">
+                                                            {[1, 2, 3, 4].map(i => (
+                                                                <div key={i} className="w-1 bg-[#a8c7fa] rounded-full animate-bounce h-4" style={{ animationDelay: `${i * 150}ms`, height: `${10 + Math.random() * 20}px` }} />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {!isAudioPlaying && <PlayCircle className="w-8 h-8 text-[#a8c7fa] opacity-60" />}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex flex-col gap-1">
+                                                <h4 className="text-[18px] font-bold text-white tracking-tight flex items-center gap-2">
+                                                    Aria's Insight
+                                                    <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1 rounded-full border ${
+                                                        audioMode === 'premium' 
+                                                            ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
+                                                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                                    }`}>
+                                                        {audioMode === 'premium' ? 'Studio Pure' : 'AInative Edge'}
+                                                    </span>
+                                                </h4>
+                                                <p className="text-[13px] text-[#8e918f] font-medium">Neural synthesis generated from selected docs</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            {audioUrl ? (
+                                                <div className="flex flex-col gap-2 items-end">
+                                                    <audio 
+                                                        ref={audioRef}
+                                                        controls 
+                                                        src={audioUrl} 
+                                                        className="h-10 w-64 md:w-80 custom-audio-player rounded-full opacity-90 transition-all focus:ring-2 focus:ring-[#a8c7fa]" 
+                                                        onPlay={() => setIsAudioPlaying(true)}
+                                                        onPause={() => setIsAudioPlaying(false)}
+                                                        onEnded={() => setIsAudioPlaying(false)}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={() => {
+                                                            window.speechSynthesis.cancel();
+                                                            const u = new SpeechSynthesisUtterance(audioTranscript || '');
+                                                            u.onstart = () => setIsAudioPlaying(true);
+                                                            u.onend = () => setIsAudioPlaying(false);
+                                                            window.speechSynthesis.speak(u);
+                                                        }}
+                                                        className="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-[14px] font-bold flex items-center gap-2 transition-all active:scale-95"
+                                                    >
+                                                        <Play className="w-4 h-4" /> REPLAY
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            window.speechSynthesis.cancel();
+                                                            setIsAudioPlaying(false);
+                                                        }}
+                                                        className="px-6 py-3 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[14px] font-bold flex items-center gap-2 transition-all active:scale-95 border border-red-500/5"
+                                                    >
+                                                        <Pause className="w-4 h-4" /> STOP
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {audioTranscript && (
+                                        <div className="bg-black/20 p-5 rounded-[20px] backdrop-blur-md border border-white/5 relative group cursor-pointer overflow-hidden transition-all hover:border-white/10">
+                                            <div className="absolute top-0 right-0 p-3 opacity-20"><Sparkles className="w-4 h-4" /></div>
+                                            <p className="text-[14px] text-white/70 italic leading-relaxed font-serif line-clamp-3 hover:line-clamp-none">
+                                                "{audioTranscript}"
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Utility Cards */}
                             {[

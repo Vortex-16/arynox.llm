@@ -9,6 +9,7 @@ import chatSessionRoutes from './routes/chatSession.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import authRoutes from './routes/auth.routes';
 import settingsRoutes from './routes/settings.routes';
+import audioRoutes from './routes/audio.routes';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use('/api/chat/session', chatSessionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/audio', audioRoutes);
 
 // Static Asset Serving (Allows Teachers to View Uploaded PDFs)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
