@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   FileText, CheckCircle, Clock, Loader2, Database, 
-  Search, Trash2
+  Search, Trash2, Menu, X as CloseIcon, Plus
 } from 'lucide-react';
 import StudentInsights from './student_insights';
 import logoSvg from '../assets/logo.svg';
@@ -20,8 +20,10 @@ interface DocumentFile {
 }
 
 export default function TeacherDashboard() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState<TabState>('onboarding');
-  
+
   // Onboarding State — empty on mount, loaded from MongoDB API below
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -224,8 +226,8 @@ export default function TeacherDashboard() {
       
       {/* Upload Metadata Modal */}
       {showMetadataModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 w-[500px] shadow-2xl">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm lg:pl-[200px] p-4">
+          <div className="bg-[#111] border-2 border-black p-6 md:p-8 w-[95%] max-w-[500px] shadow-2xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-xl font-bold mb-4">Set Document Metadata</h3>
             <p className="text-white/50 text-sm mb-6">Categorize these materials so only relevant students can access them.</p>
             
@@ -299,55 +301,53 @@ export default function TeacherDashboard() {
         </div>
       )}
       
-      {/* Sidebar */}
-      <aside className="w-64 flex flex-col justify-between py-8 px-6 border-r-2 border-black z-20">
-        <div>
+      {/* Sidebar Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[45] lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar - Desktop (Static) & Mobile (Drawer) */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-inherit flex flex-col justify-between py-8 px-6 border-r-2 border-black transition-transform duration-300 ease-in-out
+        lg:relative lg:translate-x-0 lg:z-20
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="relative">
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden absolute -top-2 -right-2 p-2 text-black hover:bg-black/5 transition-all"
+          >
+            <CloseIcon className="w-5 h-5" />
+          </button>
+          
           <div className="flex items-center gap-3 mb-10">
             <img src={logoSvg} alt="Arynox Logo" className="h-16 w-auto" />
             <span className="text-[#F9E95C] font-extrabold text-2xl tracking-tight" style={{ fontFamily: "'Gabarito', sans-serif" }}>arynox.llm</span>
           </div>
 
           <nav className="flex flex-col gap-0">
-            <button 
-              onClick={() => setActiveTab('onboarding')}
-              className={`px-4 py-3 font-bold uppercase tracking-wider text-sm border-2 border-black transition-all ${
-                activeTab === 'onboarding' 
-                ? 'bg-[#20B2AA] text-black' 
-                : 'bg-white text-black hover:bg-[#20B2AA] hover:text-white'
-              }`}
-            >
-              Knowledge Base
-            </button>
-            <button 
-              onClick={() => setActiveTab('insights')}
-              className={`px-4 py-3 font-bold uppercase tracking-wider text-sm border-2 border-t-0 border-black transition-all ${
-                activeTab === 'insights' 
-                ? 'bg-[#FF5458] text-black' 
-                : 'bg-white text-black hover:bg-[#FF5458] hover:text-white'
-              }`}
-            >
-              Student Insights
-            </button>
-            <button 
-              onClick={() => setActiveTab('classes')}
-              className={`px-4 py-3 font-bold uppercase tracking-wider text-sm border-2 border-t-0 border-black transition-all ${
-                activeTab === 'classes' 
-                ? 'bg-[#20B2AA] text-black' 
-                : 'bg-white text-black hover:bg-[#20B2AA] hover:text-white'
-              }`}
-            >
-              Classes Overview
-            </button>
-            <button 
-              onClick={() => setActiveTab('settings')}
-              className={`px-4 py-3 font-bold uppercase tracking-wider text-sm border-2 border-t-0 border-black transition-all ${
-                activeTab === 'settings' 
-                ? 'bg-[#FF5458] text-black' 
-                : 'bg-white text-black hover:bg-[#FF5458] hover:text-white'
-              }`}
-            >
-              AI Controls
-            </button>
+            {[
+              { id: 'onboarding' as TabState, label: 'Knowledge Base', color: '#20B2AA' },
+              { id: 'insights' as TabState, label: 'Student Insights', color: '#FF5458' },
+              { id: 'classes' as TabState, label: 'Classes Overview', color: '#20B2AA' },
+              { id: 'settings' as TabState, label: 'AI Controls', color: '#FF5458' }
+            ].map((tab, idx) => (
+              <button 
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id); setIsSidebarOpen(false); }}
+                className={`px-4 py-3 font-bold uppercase tracking-wider text-sm border-2 border-black transition-all ${idx > 0 ? 'border-t-0' : ''} ${
+                  activeTab === tab.id 
+                  ? `bg-[${tab.color}] text-black` 
+                  : `bg-white text-black hover:bg-[${tab.color}] hover:text-white`
+                }`}
+                style={{ backgroundColor: activeTab === tab.id ? tab.color : '' }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </nav>
         </div>
 
@@ -362,33 +362,41 @@ export default function TeacherDashboard() {
       {/* 2. Main Studio Area */}
       <main className="flex-1 flex flex-col relative">
         
-        <header className="px-6 py-3 flex justify-between items-center z-40 border-b-2 border-black bg-white shrink-0">
-          <div>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider">
-              {activeTab === 'onboarding' ? 'Faculty Hub' : activeTab === 'insights' ? 'Student Insights' : activeTab === 'classes' ? 'Classes Overview' : 'AI Controls'}
-            </h2>
-            <p className="text-black/50 text-xs">
-              {activeTab === 'onboarding' 
-                ? 'Onboard your teaching materials directly to the AI core.' 
-                : activeTab === 'insights'
-                ? 'Monitor student interactions and knowledge gaps.'
-                : activeTab === 'classes'
-                ? 'View and manage your class sections.'
-                : 'Configure AI behavior and pedagogical controls.'}
-            </p>
+        <header className="px-4 lg:px-6 py-3 flex justify-between items-center z-40 border-b-2 border-black bg-white shrink-0">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 text-black hover:bg-black/5 transition-all"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <h2 className="text-sm md:text-lg font-bold text-black uppercase tracking-wider">
+                {activeTab === 'onboarding' ? 'Faculty Hub' : activeTab === 'insights' ? 'Student Insights' : activeTab === 'classes' ? 'Classes Overview' : 'AI Controls'}
+              </h2>
+              <p className="hidden xs:block text-black/50 text-[10px] md:text-xs">
+                {activeTab === 'onboarding' 
+                  ? 'Onboard your teaching materials directly to the AI core.' 
+                  : activeTab === 'insights'
+                  ? 'Monitor student interactions and knowledge gaps.'
+                  : activeTab === 'classes'
+                  ? 'View and manage your class sections.'
+                  : 'Configure AI behavior and pedagogical controls.'}
+              </p>
+            </div>
           </div>
           
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-black/30" />
+            <Search className="w-3 h-3 md:w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-black/30" />
             <input 
               type="text" 
               placeholder="Search..."
-              className="pl-9 pr-3 py-1.5 w-56 border-2 border-black outline-none focus:border-black/70 transition-all text-black text-sm placeholder:text-black/30 bg-transparent"
+              className="pl-8 md:pl-9 pr-3 py-1 md:py-1.5 w-32 xs:w-40 md:w-56 border-2 border-black outline-none focus:border-black/70 transition-all text-black text-xs md:text-sm placeholder:text-black/30 bg-transparent"
             />
           </div>
         </header>
 
-        <div className="px-10 pb-4 z-10 w-full mx-auto flex-1 overflow-y-auto flex flex-col">
+        <div className="px-4 md:px-10 pb-4 z-10 w-full mx-auto flex-1 overflow-y-auto flex flex-col">
           
           {/* ======================= */}
           {/* ONBOARDING TAB CONTENT */}
@@ -397,32 +405,39 @@ export default function TeacherDashboard() {
             <div className="flex flex-col gap-4 pt-4 flex-1">
               
               {/* Section 1: Upload */}
-              <div className="border-2 border-black flex-1 flex flex-col">
-                <div className="border-b-2 border-black px-5 py-2 bg-white text-center">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-black">Drag & Drop Materials</h3>
+              <div className="border-2 border-black min-h-[300px] flex-1 flex flex-col">
+                <div className="border-b-2 border-black px-5 py-2 bg-white flex items-center justify-center gap-2">
+                  <Database className="w-4 h-4 text-black" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-black">Knowledge Material</h3>
                 </div>
                 <div 
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }}
-                  className={`p-10 flex flex-col items-center justify-center text-center transition-all ${isDragging ? 'bg-black/10' : ''}`}
+                  className={`p-1 flex-1 flex flex-col items-center justify-center text-center transition-all ${isDragging ? 'bg-black/10' : ''}`}
                 >
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-6 py-3 border-2 border-black bg-white text-black font-bold uppercase tracking-wider text-sm hover:bg-[#FF5458] hover:text-white hover:border-[#FF5458] transition-all mb-6"
-                  >
-                    <span className="text-xl leading-none">+</span> Browse Files
-                  </button>
-                  <p className="text-[#F9E95C] text-sm max-w-sm">
-                    Upload PDFs, TXTs, or DOCs. The system will automatically parse, chunk securely, and generate semantic embeddings for AI interactions.
-                  </p>
+                  <div className="flex flex-col items-center justify-center text-center p-4">
+                    <div className="flex flex-col items-center gap-4">
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-6 py-3 border-2 border-black bg-white text-black font-bold uppercase tracking-wider hover:bg-[#FF5458] hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Browse Files
+                      </button>
+                      <p className="text-[#F9E95C] text-sm md:text-base max-w-md leading-relaxed">
+                        Upload PDFs, TXTs, or DOCs. The system will automatically parse, chunk securely, and generate semantic embeddings for AI interactions.
+                      </p>
+                    </div>
+                  </div>
                   <input type="file" multiple accept=".txt,.pdf,.doc,.docx" className="hidden" ref={fileInputRef} onChange={(e) => handleFiles(e.target.files)} />
                 </div>
               </div>
 
-              {/* Section 2: Processing Queue */}
-              <div className="border-2 border-black flex-1 flex flex-col">
-                <div className="border-b-2 border-black px-5 py-2 flex items-center justify-center bg-white">
+              {/* Section 2: Queue */}
+              <div className="border-2 border-black min-h-[300px] flex-1 flex flex-col">
+                <div className="border-b-2 border-black px-5 py-2 bg-white flex items-center justify-center gap-2">
+                  <Clock className="w-4 h-4 text-black" />
                   <h3 className="text-sm font-bold uppercase tracking-wider text-black">Processing Queue</h3>
                   {documents.length > 0 && <span className="ml-3 px-3 py-0.5 border-2 border-black text-xs font-bold text-black">{documents.length} Files</span>}
                 </div>
@@ -446,7 +461,7 @@ export default function TeacherDashboard() {
                             </div>
                             <div className="flex-1">
                               <div className="flex justify-between items-end mb-1">
-                                <h4 className="font-bold text-[#F9E95C] truncate max-w-[200px]">{doc.name}</h4>
+                                <h4 className="font-bold text-[#F9E95C] truncate max-w-[120px] sm:max-w-[200px]">{doc.name}</h4>
                                 <span className="text-xs text-[#F9E95C]">{doc.size}</span>
                               </div>
                               <div className="flex items-center gap-3">
@@ -507,7 +522,7 @@ export default function TeacherDashboard() {
           {/* INSIGHTS TAB CONTENT */}
           {/* ======================= */}
           {activeTab === 'insights' && (
-            <div className="flex flex-col gap-4 pt-4 flex-1">
+            <div className="pt-4 flex-1 flex flex-col gap-4">
               <div className="border-2 border-black flex-1 flex flex-col">
                 <div className="border-b-2 border-black px-5 py-2 bg-white text-center">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-black">Student Analytics</h3>
@@ -528,28 +543,24 @@ export default function TeacherDashboard() {
           )}
 
           {activeTab === 'settings' && (
-            <div className="flex flex-col gap-4 pt-4 flex-1">
-              <div className="border-2 border-black flex-1 flex flex-col">
-                <div className="border-b-2 border-black px-5 py-2 bg-white text-center">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-black">Exam Mode</h3>
-                </div>
-                <div className="flex-1 flex items-center justify-center p-6">
-                  <div className="flex items-center gap-8">
-                    <div>
-                      <h4 className="font-bold text-[#F9E95C] text-lg">Strict Socratic Mode</h4>
-                      <p className="text-[#F9E95C] text-sm">AI will refuse to give direct answers and only provide hints.</p>
-                    </div>
-                    <button 
-                      onClick={async () => {
-                        const newVal = !isExamMode;
-                        setIsExamMode(newVal);
-                        await updateBackendSettings({ isExamMode: newVal });
-                      }}
-                      className={`w-14 h-8 rounded-full transition-all relative shrink-0 ${isExamMode ? 'bg-[#FF5458]' : 'bg-black/20'}`}
-                    >
-                      <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isExamMode ? 'left-7' : 'left-1'}`} />
-                    </button>
+            <div className="flex flex-col gap-4 md:gap-6 pt-4 flex-1">
+              {/* Socratic Mode */}
+              <div className="border-2 border-black bg-white/5 backdrop-blur-sm p-4 md:p-8 flex items-center justify-between shadow-2xl">
+                <div className="flex items-center gap-4 md:gap-8">
+                  <div>
+                    <h4 className="font-bold text-[#F9E95C] text-base md:text-lg">Strict Socratic Mode</h4>
+                    <p className="text-[#F9E95C] text-xs md:text-sm">AI will refuse to give direct answers and only provide hints.</p>
                   </div>
+                  <button 
+                    onClick={async () => {
+                      const newVal = !isExamMode;
+                      setIsExamMode(newVal);
+                      await updateBackendSettings({ isExamMode: newVal });
+                    }}
+                    className={`w-14 h-8 rounded-full transition-all relative shrink-0 ${isExamMode ? 'bg-[#FF5458]' : 'bg-black/20'}`}
+                  >
+                    <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isExamMode ? 'left-7' : 'left-1'}`} />
+                  </button>
                 </div>
               </div>
               <div className="border-2 border-black flex-1 flex flex-col">
@@ -583,12 +594,9 @@ export default function TeacherDashboard() {
                 </div>
                 <div className="flex-1 overflow-y-auto">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 divide-x-0 divide-y-0">
-                    {['1st Year (CSE)', '2nd Year (CSE)', '3rd Year (CSE)', '4th Year (CSE)', '1st Year (ECE)', '2nd Year (ECE)', '1st Year (IT)', '2nd Year (IT)', '3rd Year (IT)'].map((cls, idx, arr) => {
-                      const cols = 3;
-                      const isLastCol = (idx % cols) === (cols - 1);
-                      const isLastRow = idx >= arr.length - (arr.length % cols || cols);
+                    {['1st Year (CSE)', '2nd Year (CSE)', '3rd Year (CSE)', '4th Year (CSE)', '1st Year (ECE)', '2nd Year (ECE)', '1st Year (IT)', '2nd Year (IT)', '3rd Year (IT)'].map((cls) => {
                       return (
-                        <div key={cls} className={`p-6 flex flex-col items-center text-center hover:bg-black/5 transition-all border-black ${!isLastCol ? 'border-r-2' : ''} ${!isLastRow ? 'border-b-2' : ''}`}>
+                        <div key={cls} className="p-6 flex flex-col items-center text-center hover:bg-black/5 transition-all border-black border-b-2 md:border-r-2 md:even:border-r-0 lg:even:border-r-2 lg:nth-[3n]:border-r-0 last:border-b-0">
                           <h3 className="text-lg font-bold text-[#F9E95C] mb-1">{cls}</h3>
                           <div className="text-sm text-[#F9E95C]">
                             <span>65 Students</span> · <span>12 Materials</span>

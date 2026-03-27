@@ -1,4 +1,4 @@
-import { BarChart3, Users, Network, TrendingUp, Search, Database, Loader2, Download, BookOpen, X, AlertTriangle, MessageCircle, Send, CheckCircle2, Eye } from 'lucide-react';
+import { BarChart3, Users, Activity, TrendingUp, Search, Database, Loader2, Download, BookOpen, X, AlertTriangle, MessageCircle, Send, CheckCircle2, Eye } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface StuckStudent {
@@ -137,10 +137,10 @@ export default function StudentInsights() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 md:space-y-6">
       
       {/* Top KPIs */}
-      <div className="grid grid-cols-3 border-2 border-black">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 border-2 border-black bg-white/5 backdrop-blur-sm">
         <div className="p-5 border-r-2 border-black text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4 text-[#F9E95C]"/>
@@ -161,9 +161,9 @@ export default function StudentInsights() {
           </div>
           <div className="text-[#F9E95C] text-xs mt-1">Unique interacted</div>
         </div>
-        <div className="p-5 text-center">
+        <div className="p-5 text-center border-t-2 border-black sm:border-t-0">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Network className="w-4 h-4 text-[#F9E95C]"/>
+            <Activity className="w-4 h-4 text-[#F9E95C]"/>
             <h3 className="text-[#F9E95C] text-xs font-bold uppercase tracking-wider">Hit Rate</h3>
           </div>
           <div className="text-3xl font-bold text-[#F9E95C]">92.4%</div>
@@ -227,7 +227,7 @@ export default function StudentInsights() {
       </div>
 
       {/* Main Visualizations Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         
         {/* Live Queries Stream */}
         <div className="border-2 border-black flex flex-col" style={{maxHeight: '350px'}}>
@@ -342,8 +342,8 @@ export default function StudentInsights() {
 
       {/* View All Modal */}
       {showStudentsModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm pl-[200px]">
-          <div className="bg-[#111] border-2 border-black p-8 w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl relative">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm lg:pl-[200px] p-4">
+          <div className="bg-[#111] border-2 border-black p-4 md:p-8 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl relative">
             <button 
               onClick={() => setShowStudentsModal(false)}
               className="absolute top-4 right-4 p-2 text-[#F9E95C]/60 hover:text-[#F9E95C] transition-all"
@@ -387,8 +387,8 @@ export default function StudentInsights() {
 
       {/* Stuck Student Detail Modal */}
       {selectedStuck && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111] border-2 border-black p-8 w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl relative">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm lg:pl-[200px] p-4">
+          <div className="bg-[#111] border-2 border-black p-4 md:p-8 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative">
             <button 
               onClick={() => setSelectedStuck(null)}
               className="absolute top-4 right-4 p-2 text-[#F9E95C]/60 hover:text-[#F9E95C] transition-all"
