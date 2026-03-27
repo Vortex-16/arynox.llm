@@ -2,7 +2,7 @@
 
 @font-face {
     font-family: 'Aquire';
-    src: url('../../../assets/Aquire-BW0ox.otf') format('opentype');
+    src: url('../../../../assets/fonts/Aquire-BW0ox.otf') format('opentype');
 }
 
 html,

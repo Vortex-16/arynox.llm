@@ -2,11 +2,14 @@ import React, { useRef, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Ensure useNavigate is imported correctly
+import { useAuth } from '../../../context/AuthContext';
 import './index.css';
 
 export default function App() {
+    const containerRef = useRef(null);
     const navigate = useNavigate();
+    const { login, isAuthenticated, user, loading } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [slideIndex, setSlideIndex] = useState(0);
 
@@ -29,15 +32,12 @@ export default function App() {
     ];
 
     useEffect(() => {
-        // Auto-login check
-        const storedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
-        if (storedUser && token) {
-            const user = JSON.parse(storedUser);
-            if (user.role === 'teacher') {
-                navigate('/teacher');
+        // Auto-login check via AuthContext
+        if (!loading && isAuthenticated && user) {
+            if (!user.onboardingComplete) {
+                navigate('/onboarding');
             } else {
-                navigate('/student');
+                navigate(user.role === 'teacher' ? '/teacher' : '/student');
             }
         }
 
@@ -45,7 +45,7 @@ export default function App() {
             setSlideIndex((prev) => (prev + 1) % slides.length);
         }, 5000);
         return () => clearInterval(timer);
-    }, [slides.length, navigate]);
+    }, [slides.length, navigate, isAuthenticated, user, loading]);
 
     const handleGoogleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
@@ -58,13 +58,8 @@ export default function App() {
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    if (data.user.role === 'teacher') {
-                        navigate('/teacher');
-                    } else {
-                        navigate('/student');
-                    }
+                    login(data.user, data.token);
+                    // Redirection handled by useEffect
                 } else {
                     console.error('Login failed:', data.message);
                     alert(data.message || 'Login failed');
@@ -204,26 +199,49 @@ export default function App() {
             }
         };
 
-        const onSubmitClick = (e) => {
+        const onSubmitClick = async (e) => {
             e.preventDefault();
             if (emailValid && checkboxEl.checked && nameValid && sprayRepeatCounter > 1) {
-                gsap.to(".main-svg > *", {
-                    duration: .1,
-                    opacity: 0,
-                    stagger: {
-                        each: 0.03,
-                        from: 'random',
-                        ease: 'none',
+                const name = nameEl.value;
+                const email = emailEl.value;
+                const password = querySelector('.form-container .form-row input[name="password"]').value;
+
+                setIsLoading(true);
+                try {
+                    const res = await fetch('http://localhost:5000/api/auth/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, password, role: 'student' }) // Default to student
+                    });
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        gsap.to(".main-svg > *", {
+                            duration: .1,
+                            opacity: 0,
+                            stagger: {
+                                each: 0.03,
+                                from: 'random',
+                                ease: 'none',
+                            }
+                        });
+                        gsap.to([".form-container", ".google-btn"], {
+                            delay: .4,
+                            duration: .1,
+                            opacity: 0,
+                            onComplete: () => {
+                                login(data.user, data.token);
+                            }
+                        });
+                    } else {
+                        alert(data.message || 'Registration failed');
                     }
-                });
-                gsap.to([".form-container", ".google-btn"], {
-                    delay: .4,
-                    duration: .1,
-                    opacity: 0,
-                    onComplete: () => {
-                        navigate('/student');
-                    }
-                });
+                } catch (err) {
+                    console.error('Registration error:', err);
+                    alert('Server error');
+                } finally {
+                    setIsLoading(false);
+                }
             }
         };
 

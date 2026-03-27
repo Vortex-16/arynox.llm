@@ -1,5 +1,6 @@
 import { BarChart3, Users, Network, TrendingUp, Search, Database, Loader2, Download, BookOpen, X, AlertTriangle, MessageCircle, Send, CheckCircle2, Eye } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface StuckStudent {
   studentId: string;
@@ -18,6 +19,7 @@ interface StuckStudent {
 }
 
 export default function StudentInsights() {
+  const { token } = useAuth();
   const [analytics, setAnalytics] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -33,7 +35,9 @@ export default function StudentInsights() {
 
   const fetchStuckStudents = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/analytics/stuck-students');
+      const res = await fetch('http://localhost:5000/api/analytics/stuck-students', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (res.ok) setStuckStudents(await res.json());
     } catch (err) {
       console.error("Failed to refresh stuck students", err);
@@ -44,8 +48,12 @@ export default function StudentInsights() {
     const fetchAnalytics = async () => {
       try {
         const [resAnalytics, resStudents] = await Promise.all([
-            fetch('http://localhost:5000/api/analytics/insights'),
-            fetch('http://localhost:5000/api/analytics/students')
+            fetch('http://localhost:5000/api/analytics/insights', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }),
+            fetch('http://localhost:5000/api/analytics/students', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
         ]);
         if (resAnalytics.ok) setAnalytics(await resAnalytics.json());
         if (resStudents.ok) setStudents(await resStudents.json());
@@ -99,7 +107,10 @@ export default function StudentInsights() {
     try {
       const res = await fetch('http://localhost:5000/api/analytics/teacher-respond', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           studentId: selectedStuck.studentId,
           sessionId: selectedStuck.queries?.[0]?.sessionId || selectedStuck.sessionId,

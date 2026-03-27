@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MessageSquare, PlusCircle, Pause, Play } from 'lucide-react';
+import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User as UserIcon, Settings2, Share2, MessageSquare, PlusCircle, Pause, Play, BrainCircuit } from 'lucide-react';
 import blobVideo from '../assets/blob_gradient.mov';
 import { Link, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
 
 interface YouTubeVideo {
     videoId: string;
@@ -27,6 +28,15 @@ interface SourceDocument {
     name: string;
     wordCount: string;
     selected: boolean;
+}
+
+interface Doubt {
+    _id: string;
+    question: string;
+    answer?: string;
+    subject: string;
+    status: 'pending' | 'resolved';
+    createdAt: string;
 }
 
 /** Formats large numbers to readable shorthand: 1200000 → 1.2M */
@@ -111,10 +121,13 @@ function YouTubeVideoCard({ video }: { video: YouTubeVideo }) {
 }
 
 export default function Notebook() {
+    const { user, token } = useAuth();
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
     const targetDocId = queryParams.get('docId');
     const targetDocName = queryParams.get('name');
+    const targetSubject = queryParams.get('subject');
+    const targetModule = queryParams.get('module');
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
@@ -132,17 +145,17 @@ export default function Notebook() {
 
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [chatSessions, setChatSessions] = useState<any[]>([]);
+    const [myDoubts, setMyDoubts] = useState<Doubt[]>([]);
+    const [isSendingDoubt, setIsSendingDoubt] = useState(false);
 
-    // Mock Student Profile
-    const studentProfile = {
-        id: 'student_123',
-        className: '2nd Year',
-        department: 'Computer Science'
-    };
+    if (!user) return null;
 
     const fetchSessions = async () => {
+        if (!user) return;
         try {
-            const res = await fetch(`${API_BASE_URL}/api/chat/session/list/${studentProfile.id}`);
+            const res = await fetch(`${API_BASE_URL}/api/chat/session/list/${user.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setChatSessions(data);
@@ -152,25 +165,53 @@ export default function Notebook() {
 
     useEffect(() => {
         const fetchDocuments = async () => {
+            if (!user) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/documents?className=${encodeURIComponent(studentProfile.className)}&department=${encodeURIComponent(studentProfile.department)}`);
+                const params = new URLSearchParams({
+                    className: user.className || '',
+                    department: user.department || '',
+                    semester: user.semester || ''
+                });
+                const res = await fetch(`${API_BASE_URL}/api/documents?${params.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 if (res.ok) {
                     const data = await res.json();
-                    const mappedSources = data.map((doc: any, index: number) => ({
-                        id: doc._id,
-                        name: doc.title,
-                        wordCount: 'Processed File',
-                        // Strictly select ONLY the clicked doc if provided, otherwise select first 3
-                        selected: targetDocId ? (doc._id.toString() === targetDocId.toString()) : index < 3
-                    }));
+                    
+                    const mappedSources = data.map((doc: any, index: number) => {
+                        let selected = false;
+                        if (targetDocId) {
+                            selected = doc._id === targetDocId;
+                        } else if (targetSubject && targetModule) {
+                            selected = doc.subject === targetSubject && doc.module === targetModule;
+                        } else {
+                            // If it's a "normal" guide (no params), select first 3 as default or leave empty
+                            selected = (!targetDocId && !targetSubject) ? index < 3 : false;
+                        }
+
+                        return {
+                            id: doc._id,
+                            name: doc.title,
+                            wordCount: 'Processed File',
+                            selected
+                        };
+                    });
+
                     setSources(mappedSources);
                     
-                    // Set initial welcome message after sources are loaded
                     const selectedCount = mappedSources.filter((s: any) => s.selected).length;
+                    let welcomePrefix = `Hello! I am your AI Socratic Tutor. You currently have ${selectedCount} source${selectedCount !== 1 ? 's' : ''} selected.`;
+                    
+                    if (targetDocName) {
+                        welcomePrefix += ` I've pre-loaded **${targetDocName}** for you.`;
+                    } else if (targetSubject && targetModule) {
+                        welcomePrefix += ` I've pre-loaded all materials for **${targetSubject} - ${targetModule}**.`;
+                    }
+
                     setMessages([{
                         id: '1',
                         role: 'assistant',
-                        content: `Hello! I am your AI Socratic Tutor. You currently have ${selectedCount} source${selectedCount !== 1 ? 's' : ''} selected. ${targetDocName ? `I've pre-loaded **${targetDocName}** for you.` : ''} Try asking me anything about these materials!`
+                        content: `${welcomePrefix} Try asking me anything about these materials!`
                     }]);
                 }
             } catch (err) {
@@ -179,13 +220,28 @@ export default function Notebook() {
                 setIsLoadingSources(false);
             }
         };
-        fetchDocuments();
+        if (user) fetchDocuments();
         fetchSessions();
-    }, [targetDocId, targetDocName]);
+        fetchMyDoubts();
+    }, [targetDocId, targetDocName, targetSubject, targetModule, user]);
+
+    const fetchMyDoubts = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/doubts/my`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setMyDoubts(data);
+            }
+        } catch (err) {}
+    };
 
     const loadSession = async (id: string) => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/chat/session/load/${id}`);
+            const res = await fetch(`${API_BASE_URL}/api/chat/session/load/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await res.json();
             setSessionId(data.sessionId);
             setMessages(data.messages.map((m: any) => ({
@@ -213,29 +269,27 @@ export default function Notebook() {
 
     // ─── REAL-TIME NOTIFICATIONS (SSE) ──────────────────────────────────────
     useEffect(() => {
+        if (!user?.id) return;
+
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission();
         }
 
-        const eventSource = new EventSource(`http://localhost:5000/api/notifications/stream?role=student&studentId=${studentProfile.id}`);
+        const eventSource = new EventSource(`${API_BASE_URL}/api/notifications/stream?role=student&studentId=${user.id}`);
 
         eventSource.onmessage = (event) => {
             const data = JSON.parse(event.data);
             console.log("[SSE] Student event received:", data);
 
             if (data.type === 'TEACHER_REPLY') {
-                // 1. Show native browser notification
                 if (Notification.permission === "granted") {
                     new Notification("Teacher Responded! 🎓", {
                         body: `A teacher has provided an explanation for: "${data.topic}"`,
                         icon: "/favicon.ico"
                     });
                 }
-
-                // 2. Refresh current session if active, or just the list
-                if (sessionId) {
-                    loadSession(sessionId);
-                }
+                fetchMyDoubts();
+                if (sessionId) loadSession(sessionId);
                 fetchSessions();
             }
         };
@@ -249,6 +303,41 @@ export default function Notebook() {
             eventSource.close();
         };
     }, [sessionId]);
+
+    const handleAskFaculty = async () => {
+        if (!inputMessage.trim() || isSendingDoubt) return;
+        
+        // Use the current subject/module from params or first selected source's metadata
+        const currentSubject = targetSubject || sources.find(s => s.selected)?.name || 'General';
+
+        setIsSendingDoubt(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/doubts`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({
+                    subject: currentSubject,
+                    question: inputMessage.trim()
+                })
+            });
+
+            if (res.ok) {
+                setInputMessage('');
+                fetchMyDoubts();
+                alert("Doubt sent to faculty! You'll be notified when they respond.");
+            } else {
+                const data = await res.json();
+                alert(data.error || "Failed to send doubt");
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsSendingDoubt(false);
+        }
+    };
 
     const toggleSource = (id: string) => {
         setSources((prev: SourceDocument[]) => prev.map((s: SourceDocument) => s.id === id ? { ...s, selected: !s.selected } : s));
@@ -265,11 +354,14 @@ export default function Notebook() {
         try {
             const res = await fetch(`${API_BASE_URL}/api/audio/generate`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     sourceIds: selectedIds,
-                    className: studentProfile.className,
-                    department: studentProfile.department
+                    className: user.className,
+                    department: user.department
                 })
             });
 
@@ -334,15 +426,18 @@ export default function Notebook() {
             const response = await fetch(`${API_BASE_URL}/api/chat/ask`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     query: userMsg.content,
-                    department: studentProfile.department,
-                    className: studentProfile.className,
-                    studentId: studentProfile.id,
+                    department: user.department,
+                    className: user.className,
+                    studentId: user.id,
                     sessionId: sessionId,
-                    sourceIds: sources.filter(s => s.selected).map(s => s.id)
+                    sourceIds: sources.filter(s => s.selected).map(s => s.id),
+                    subject: targetSubject,
+                    module: targetModule
                 })
             });
 
@@ -384,7 +479,7 @@ export default function Notebook() {
                         <ArrowLeft className="w-4 h-4" /> Back to Student Dashboard
                     </Link>
                     <div className="flex items-center justify-between mt-2">
-                        <h1 className="text-[20px] font-semibold text-[#e3e3e3] tracking-tight truncate">{studentProfile.department} Portal</h1>
+                        <h1 className="text-[20px] font-semibold text-[#e3e3e3] tracking-tight truncate">{user.department} Portal</h1>
                     </div>
                 </div>
 
@@ -458,6 +553,35 @@ export default function Notebook() {
                                 <span className={`text-[13px] truncate ${sessionId === sess.sessionId ? 'text-[#e3e3e3] font-medium' : 'text-[#c4c7c5]'}`}>
                                     {sess.title}
                                 </span>
+                            </div>
+                        ))}
+                    </div>
+                    {/* Doubt History section */}
+                    <div className="px-5 py-2 mt-4 flex items-center justify-between group">
+                        <span className="text-sm font-medium text-amber-400">Faculty Doubts</span>
+                        <div className="w-5 h-5 rounded-full bg-amber-500/10 flex items-center justify-center text-[10px] text-amber-400 font-bold">
+                            {myDoubts.filter(d => d.status === 'pending').length}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1 px-3 mt-1 pb-10 flex-1 overflow-y-auto scrollbar-hide">
+                        {myDoubts.map(d => (
+                            <div 
+                                key={d._id}
+                                className={`px-3 py-3 rounded-xl bg-white/[0.02] border border-white/5 mb-1 ${d.status === 'resolved' ? 'border-emerald-500/30' : 'border-amber-500/10'}`}
+                            >
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#8e918f]">{d.subject}</span>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${d.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                        {d.status}
+                                    </span>
+                                </div>
+                                <p className="text-[12px] line-clamp-2 text-white/70 mb-2 italic">"{d.question}"</p>
+                                {d.answer && (
+                                    <div className="mt-2 pt-2 border-t border-white/5">
+                                        <p className="text-[11px] text-emerald-400 line-clamp-3">Ans: {d.answer}</p>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -642,7 +766,7 @@ export default function Notebook() {
                                             </div>
                                         ) : (
                                             <div className="w-8 h-8 rounded-full bg-[#e3e3e3] flex items-center justify-center">
-                                                <User className="w-5 h-5 text-[#131314]" />
+                                                <UserIcon className="w-5 h-5 text-[#131314]" />
                                             </div>
                                         )}
                                     </div>
@@ -699,21 +823,37 @@ export default function Notebook() {
                                 type="text"
                                 value={inputMessage}
                                 onChange={(e) => setInputMessage(e.target.value)}
-                                placeholder="Type to chat with your sources"
+                                placeholder="Type to chat with your sources..."
                                 className="flex-1 bg-transparent px-2 py-3 text-[15px] text-[#e3e3e3] outline-none placeholder:text-[#8e918f]"
-                                disabled={isTyping}
+                                disabled={isTyping || isSendingDoubt}
                             />
-                            <button
-                                type="submit"
-                                disabled={!inputMessage.trim() || isTyping}
-                                className={`w-10 h-10 mr-1 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                                    inputMessage.trim() && !isTyping 
-                                        ? 'bg-[#a8c7fa] text-[#041e49] hover:bg-[#b9d5ff]' 
-                                        : 'bg-[#333537] text-[#8e918f]'
-                                }`}
-                            >
-                                {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0 px-2">
+                                <button
+                                    type="button"
+                                    onClick={handleAskFaculty}
+                                    disabled={!inputMessage.trim() || isSendingDoubt}
+                                    title="Ask Subject Teacher Instead"
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-tighter transition-all flex items-center gap-1.5 ${
+                                        inputMessage.trim() && !isSendingDoubt
+                                            ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20'
+                                            : 'text-[#8e918f] opacity-50 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {isSendingDoubt ? <Loader2 className="w-3 h-3 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
+                                    Ask Faculty
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!inputMessage.trim() || isTyping || isSendingDoubt}
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                                        inputMessage.trim() && !isTyping && !isSendingDoubt
+                                            ? 'bg-[#a8c7fa] text-[#041e49] hover:bg-[#b9d5ff] scale-105 shadow-lg shadow-[#a8c7fa]/20' 
+                                            : 'bg-[#333537] text-[#8e918f]'
+                                    }`}
+                                >
+                                    {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
+                                </button>
+                            </div>
                         </form>
                         <div className="text-center text-[12px] text-[#8e918f] font-medium tracking-wide">
                             **arynox.llm** may display inaccurate info, so double-check its responses.

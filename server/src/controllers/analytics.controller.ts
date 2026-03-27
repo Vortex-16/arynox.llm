@@ -318,3 +318,76 @@ export const teacherRespond = async (req: Request, res: Response): Promise<void>
         res.status(500).json({ error: 'Failed to send teacher response.' });
     }
 };
+
+// ─── UNIVERSITY-WIDE ANALYTICS & SUBJECT INSIGHTS ──────────────────────────────
+
+export const getUniversityOverview = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const totalQueries = await QueryLog.countDocuments();
+        const totalStudents = await (require('../models/User').default).countDocuments({ role: 'student' });
+        const totalTeachers = await (require('../models/User').default).countDocuments({ role: 'teacher' });
+        const totalDocs = await (require('../models/DocumentMeta').default).countDocuments();
+
+        const deptActivity = await QueryLog.aggregate([
+            { $group: { _id: "$department", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        const subjectConfusion = await QueryLog.aggregate([
+            { $match: { status: 'UNANSWERED_FORWARDED' } },
+            { $group: { _id: "$subject", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        res.status(200).json({
+            stats: { totalQueries, totalStudents, totalTeachers, totalDocs },
+            deptActivity: deptActivity.map(d => ({ name: d._id || 'General', value: d.count })),
+            subjectConfusion: subjectConfusion.map(s => ({ subject: s._id || 'General', count: s.count }))
+        });
+    } catch (error) {
+        console.error("University Overview Error:", error);
+        res.status(500).json({ error: 'Failed to retrieve university overview.' });
+    }
+};
+
+export const getSubjectAnalytics = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { department, subject, semester } = req.query;
+        let filter: any = {};
+        if (department) filter.department = department;
+        if (subject) filter.subject = subject;
+        if (semester) filter.semester = semester;
+
+        const topicHeatmap = await QueryLog.aggregate([
+            { $match: filter },
+            { $group: { 
+                _id: "$topic", 
+                count: { $sum: 1 },
+                unanswered: { 
+                    $sum: { $cond: [{ $eq: ["$status", "UNANSWERED_FORWARDED"] }, 1, 0] } 
+                }
+            }},
+            { $sort: { count: -1 } },
+            { $limit: 20 }
+        ]);
+
+        const moduleStats = await QueryLog.aggregate([
+            { $match: filter },
+            { $group: { _id: "$module", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        res.status(200).json({
+            topicHeatmap: topicHeatmap.map(t => ({
+                topic: t._id,
+                total: t.count,
+                confusionRate: t.count > 0 ? ((t.unanswered / t.count) * 100).toFixed(1) : 0
+            })),
+            moduleStats: moduleStats.map(m => ({ module: m._id || 'Unassigned', count: m.count }))
+        });
+    } catch (error) {
+        console.error("Subject Analytics Error:", error);
+        res.status(500).json({ error: 'Failed to retrieve subject analytics.' });
+    }
+};

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import DocumentMeta from '../models/DocumentMeta';
+import User from '../models/User';
 import { extractTextFromFile, processDocumentAndStore, buildCollectionName } from '../services/document.service';
 import { deleteDocumentFromChroma } from '../services/vectorstore.service';
 import fs from 'fs';
@@ -38,6 +39,9 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
             { className, semester, department, subject, chapter, section, module }
         );
 
+        const teacherUser = await User.findById(req.user?.userId);
+        const tName = teacherUser?.name || 'Faculty';
+
         // 3. Save metadata to MongoDB
         const documentMeta = new DocumentMeta({
             title,
@@ -48,6 +52,8 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
             chapter:             chapter    || '',
             section:             section    || '',
             module:              module     || '',
+            teacherId:           req.user?.userId,
+            teacherName:         tName,
             chromaCollectionRef: chromaCollectionName,
             fileUrl:             `/uploads/${req.file.filename}`,
         });
@@ -71,17 +77,35 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
 
 export const getDocuments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+        const user = req.user;
         const { className, department, semester, subject } = req.query;
-        const filter: any = {};
+        let filter: any = {};
 
-        if (className) filter.className = className;
-        if (department) filter.department = department;
-        if (semester)   filter.semester   = semester;
-        if (subject)    filter.subject    = subject;
+        // 🛡️ SECURITY: Server-side Role-Based Filtering
+        if (user?.role === 'student') {
+            const fullUser = await User.findById(user.userId);
+            if (fullUser) {
+                if (fullUser.department) filter.department = fullUser.department;
+                if (fullUser.className)  filter.className  = fullUser.className;
+                if (fullUser.semester) {
+                    const semVal = fullUser.semester; // e.g. "Sem 3"
+                    const altSemVal = semVal.replace('Sem ', 'Semester '); // e.g. "Semester 3"
+                    filter.semester = { $in: [semVal, altSemVal] };
+                }
+            }
+        }
+ else {
+            // Teachers/Admins can see everything or apply elective filters via query
+            if (className) filter.className = className;
+            if (department) filter.department = department;
+            if (semester)   filter.semester   = semester;
+            if (subject)    filter.subject    = subject;
+        }
 
         const docs = await DocumentMeta.find(filter).sort({ uploadedAt: -1 });
         res.status(200).json(docs);
     } catch (error) {
+        console.error("Fetch Docs Error:", error);
         res.status(500).json({ error: 'Failed to retrieve documents.' });
     }
 };
@@ -116,5 +140,34 @@ export const deleteDocument = async (req: Request, res: Response, next: NextFunc
     } catch (error) {
         console.error("Delete Error:", error);
         res.status(500).json({ error: 'Failed to delete document' });
+    }
+};
+
+export const updateDocument = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { title, subject, module, chapter, section, semester, className } = req.body;
+        
+        const doc = await DocumentMeta.findById(id);
+        if (!doc) {
+            res.status(404).json({ error: 'Document not found' });
+            return;
+        }
+
+        // Update fields
+        if (title) doc.title = title;
+        if (subject) doc.subject = subject;
+        if (module) doc.module = module;
+        if (chapter) doc.chapter = chapter;
+        if (section) doc.section = section;
+        if (semester) doc.semester = semester;
+        if (className) doc.className = className;
+
+        await doc.save();
+
+        res.status(200).json({ message: 'Document updated successfully', doc });
+    } catch (error) {
+        console.error("Update Error:", error);
+        res.status(500).json({ error: 'Failed to update document metadata' });
     }
 };

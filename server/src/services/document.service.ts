@@ -119,6 +119,35 @@ export const extractTextFromFile = async (filePath: string): Promise<string> => 
         return await extractTextFromDocx(filePath);
     }
 
+    const isImage = ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png');
+
+    if (isImage) {
+        console.log(`[Extractor] Processing Image with OCR: ${filePath}`);
+        const apiKey = process.env.NVIDIA_API_KEY;
+        if (!apiKey) throw new Error('NVIDIA_API_KEY missing in .env');
+
+        // We can reuse extractWithNemotronOCR for images too, as it uses pdf-to-png logic
+        // But for a single image, we can just read the file directly
+        const imageBuf = fs.readFileSync(filePath);
+        // Compress and encode
+        const jpegBuf = await sharp(imageBuf).jpeg({ quality: 50 }).toBuffer();
+        const b64 = jpegBuf.toString('base64');
+        
+        const OCR_URL = 'https://ai.api.nvidia.com/v1/cv/nvidia/nemotron-ocr-v1';
+        const res = await axios.post(OCR_URL, {
+            input: [{ type: 'image_url', url: `data:image/jpeg;base64,${b64}` }]
+        }, {
+            headers: { 'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`, 'Accept': 'application/json' },
+            timeout: 15000
+        });
+
+        const detections: any[] = res.data?.data?.[0]?.text_detections || [];
+        const text = detections.map((d: any) => d.text_prediction?.text || '').join(' ').trim();
+        
+        if (!text) throw new Error('Image OCR found no text.');
+        return text;
+    }
+
     console.log(`[Extractor] Processing PDF: ${filePath}`);
 
     // 1. Try text layer first (instant, free, handles digital PDFs perfectly)

@@ -8,7 +8,7 @@ import ChatSession from '../models/ChatSession';
 import SystemSetting from '../models/SystemSetting';
 import DocumentMeta from '../models/DocumentMeta';
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
-import { notifyTeacher } from './notifications.controller';
+import { notifyAllTeachers } from './notifications.controller';
 
 /** Detects if the student is asking for a video/tutorial recommendation */
 const isVideoRequest = (query: string): boolean => {
@@ -17,7 +17,27 @@ const isVideoRequest = (query: string): boolean => {
 
 export const askChat = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const { query, department, studentId, sessionId, className, subject, chapter, section, sourceIds } = req.body;
+        const user = req.user;
+        if (!user) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
+        // Fetch full verified profile from DB
+        const fullUser = await (require('../models/User').default).findById(user.userId);
+        if (!fullUser) {
+            res.status(404).json({ error: 'User profile not found' });
+            return;
+        }
+
+        const { query, sessionId, subject, chapter, section, sourceIds } = req.body;
+        
+        // Verified identity props — ignore client-sent overrides for security
+        const department = fullUser.department || 'General';
+        const className = fullUser.className || 'Global';
+        const semester = fullUser.semester || '';
+        const studentId = fullUser._id.toString();
+
         if (!query) {
              res.status(400).json({ error: 'Query is required.' });
              return;
@@ -26,19 +46,19 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
         const activeSessionId = sessionId || Math.random().toString(36).substring(2, 15);
 
         // ─── YouTube Video Intent Detection ───────────────────────────────────────
-        // Kick off YouTube search in parallel (non-blocking) if query is a video request
         const videoSearchPromise = isVideoRequest(query)
             ? searchBestYouTubeVideo(query)
             : Promise.resolve(null);
+
         let session = await ChatSession.findOne({ sessionId: activeSessionId });
         
         if (!session) {
             session = new ChatSession({
                 sessionId: activeSessionId,
-                studentId: studentId || 'anonymous_student',
+                studentId,
                 title: query.substring(0, 40) + '...',
-                department: department || 'General',
-                className: className || 'Global',
+                department,
+                className,
                 messages: []
             });
         }
@@ -323,6 +343,8 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
              query,
              response: rawAnswer,
              topic: extractedTopic,
+             subject: subject || (searchResults.metadatas?.[0]?.[0] as any)?.subject || 'General',
+             module: (searchResults.metadatas?.[0]?.[0] as any)?.module || 'Introductory',
              department: department || 'General',
              status: statusToLog,
              forwardedToTeacher: forwarded
@@ -333,7 +355,7 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
         if (studentId && extractedTopic) {
             const count = await QueryLog.countDocuments({ studentId, topic: extractedTopic });
             if (count === 3) {
-                notifyTeacher({ 
+                notifyAllTeachers({ 
                     type: 'STUCK_STUDENT', 
                     studentId, 
                     topic: extractedTopic,

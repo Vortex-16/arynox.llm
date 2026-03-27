@@ -1,16 +1,20 @@
 import { Router } from 'express';
 import { uploadMiddleWare } from '../middlewares/upload.middleware';
-import { getDocuments, uploadDocument, deleteDocument } from '../controllers/document.controller';
+import { getDocuments, uploadDocument, deleteDocument, updateDocument } from '../controllers/document.controller';
+import { authenticate, requireRole } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Endpoint for faculty to upload materials 
-router.post('/upload', uploadMiddleWare.single('document'), uploadDocument);
+// Faculty only: upload
+router.post('/upload', authenticate, requireRole('teacher'), uploadMiddleWare.single('document'), uploadDocument);
 
-// Endpoint to fetch list of uploaded materials
-router.get('/', getDocuments);
+// Any authenticated user: list documents (filtered server-side by role)
+router.get('/', authenticate, getDocuments);
 
-// Endpoint to delete a document and its vectors
-router.delete('/:id', deleteDocument);
+// Faculty only: update
+router.put('/:id', authenticate, requireRole('teacher'), updateDocument);
+
+// Faculty only: delete
+router.delete('/:id', authenticate, requireRole('teacher'), deleteDocument);
 
 export default router;

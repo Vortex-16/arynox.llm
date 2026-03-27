@@ -9,6 +9,8 @@ export interface IDocumentMeta extends Document {
   chapter?: string;     // e.g. "Chapter 2 - Laws of Motion"
   section?: string;     // e.g. "Section 2.1"
   module?: string;      // e.g. "Module 1"
+  teacherId?: string;   // Reference to the uploader
+  teacherName?: string; // Cache the teacher's name for easier display
   uploadedAt: Date;
   chromaCollectionRef: string;
   fileUrl?: string;
@@ -23,6 +25,8 @@ const DocumentMetaSchema: Schema = new Schema({
   chapter: { type: String, required: false },
   section: { type: String, required: false },
   module: { type: String, required: false },
+  teacherId: { type: String, required: false },
+  teacherName: { type: String, required: false },
   uploadedAt: { type: Date, default: Date.now },
   chromaCollectionRef: { type: String, required: true },
   fileUrl: { type: String, required: false },

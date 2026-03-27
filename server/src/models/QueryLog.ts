@@ -6,6 +6,8 @@ export interface IQueryLog extends Document {
   query: string;
   response: string;
   topic?: string;
+  subject?: string;
+  module?: string;
   timestamp: Date;
   department?: string;
   forwardedToTeacher: boolean;
@@ -18,6 +20,8 @@ const QueryLogSchema: Schema = new Schema({
   query: { type: String, required: true },
   response: { type: String, required: true },
   topic: { type: String, default: 'General' },
+  subject: { type: String, default: '' },
+  module: { type: String, default: '' },
   timestamp: { type: Date, default: Date.now },
   department: { type: String, required: false },
   forwardedToTeacher: { type: Boolean, default: false },
