@@ -91,7 +91,12 @@ input, textarea {
 }
 
 
-/* Removed cursor: none media query to restore native pointers */
+/* Hide native cursor on desktop — CustomCursor component provides the visual */
+@media (min-width: 1024px) {
+  html, body, #root, * {
+    cursor: none !important;
+  }
+}
 
 @keyframes grain {
   0%, 100% { transform:translate(0, 0) }
