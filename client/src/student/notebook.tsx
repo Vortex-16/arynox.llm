@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User as UserIcon, Settings2, Share2, MessageSquare, PlusCircle, Pause, Play, BrainCircuit } from 'lucide-react';
+import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User as UserIcon, Settings2, Share2, MessageSquare, PlusCircle, Pause, Play, BrainCircuit, ChevronRight, X, GraduationCap } from 'lucide-react';
 import blobVideo from '../assets/blob_gradient.mov';
 import { Link, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -147,6 +147,7 @@ export default function Notebook() {
     const [chatSessions, setChatSessions] = useState<any[]>([]);
     const [myDoubts, setMyDoubts] = useState<Doubt[]>([]);
     const [isSendingDoubt, setIsSendingDoubt] = useState(false);
+    const [selectedDoubt, setSelectedDoubt] = useState<Doubt | null>(null);
 
     if (!user) return null;
 
@@ -564,22 +565,24 @@ export default function Notebook() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-1 px-3 mt-1 pb-10 flex-1 overflow-y-auto scrollbar-hide">
+                    <div className="flex flex-col gap-2 px-3 mt-1 pb-10 flex-1 overflow-y-auto scrollbar-hide">
                         {myDoubts.map(d => (
                             <div 
                                 key={d._id}
-                                className={`px-3 py-3 rounded-xl bg-white/[0.02] border border-white/5 mb-1 ${d.status === 'resolved' ? 'border-emerald-500/30' : 'border-amber-500/10'}`}
+                                onClick={() => setSelectedDoubt(d)}
+                                className={`px-4 py-4 rounded-2xl bg-white/[0.03] border border-white/5 mb-1 cursor-pointer transition-all hover:bg-white/5 active:scale-[0.98] ${d.status === 'resolved' ? 'border-emerald-500/20 hover:border-emerald-500/40' : 'border-amber-500/10 hover:border-amber-500/30'}`}
                             >
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#8e918f]">{d.subject}</span>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${d.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/30">{d.subject}</span>
+                                    <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase ${d.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
                                         {d.status}
                                     </span>
                                 </div>
-                                <p className="text-[12px] line-clamp-2 text-white/70 mb-2 italic">"{d.question}"</p>
+                                <p className="text-[13px] line-clamp-2 text-white/70 mb-2 leading-relaxed italic">"{d.question}"</p>
                                 {d.answer && (
-                                    <div className="mt-2 pt-2 border-t border-white/5">
-                                        <p className="text-[11px] text-emerald-400 line-clamp-3">Ans: {d.answer}</p>
+                                    <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                                        <p className="text-[11px] text-emerald-400 font-bold uppercase tracking-tighter">View Faculty Answer</p>
+                                        <ChevronRight className="w-3 h-3 text-emerald-400" />
                                     </div>
                                 )}
                             </div>
@@ -861,6 +864,73 @@ export default function Notebook() {
                     </div>
                 </div>
             </main>
+
+            {/* Doubt Detail Modal */}
+            {selectedDoubt && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="bg-[#0e0e0e] border border-white/10 rounded-[40px] w-full max-w-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-500">
+                        {/* Header */}
+                        <div className="p-10 border-b border-white/5 flex justify-between items-start relative overflow-hidden shrink-0">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl" />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-widest rounded-full">{selectedDoubt.subject}</span>
+                                    <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${selectedDoubt.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/30'}`}>{selectedDoubt.status}</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-white italic tracking-tight">DOUBT RESOLUTION</h3>
+                            </div>
+                            <button 
+                                onClick={() => setSelectedDoubt(null)}
+                                className="p-3 rounded-full hover:bg-white/5 transition-colors group relative z-10"
+                            >
+                                <X className="w-6 h-6 text-white/20 group-hover:text-white" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Student Inquiry</p>
+                                <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/5">
+                                    <p className="text-lg font-medium text-white/90 leading-relaxed italic">"{selectedDoubt.question}"</p>
+                                </div>
+                            </div>
+
+                            {selectedDoubt.answer ? (
+                                <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-700">
+                                    <p className="text-[10px] font-black text-emerald-500/60 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <GraduationCap className="w-3 h-3" />
+                                        Faculty Clarification
+                                    </p>
+                                    <div className="p-8 rounded-[32px] bg-emerald-500/[0.03] border border-emerald-500/10">
+                                        <div className="prose prose-invert max-w-none">
+                                            <p className="text-base text-emerald-100/80 leading-loose whitespace-pre-wrap">{selectedDoubt.answer}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-8 rounded-[32px] bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center text-center">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+                                        <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
+                                    </div>
+                                    <p className="text-sm font-bold text-white/40">Our faculty is currently reviewing your inquiry.</p>
+                                    <p className="text-[10px] uppercase font-black tracking-widest text-white/10 mt-2">Awaiting Academic Intervention</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-8 bg-white/[0.02] flex justify-center shrink-0">
+                            <button 
+                                onClick={() => setSelectedDoubt(null)}
+                                className="px-12 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[10px] font-black text-white/40 hover:text-white uppercase tracking-[0.2em] transition-all"
+                            >
+                                Close Perspective
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

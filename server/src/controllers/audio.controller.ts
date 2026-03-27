@@ -13,20 +13,34 @@ export const generateAudioOverview = async (req: Request, res: Response) => {
         }
 
         // ── 1. Get source content from ChromaDB ────────────────────────────
-        const sourceTitles = await DocumentMeta.find({ _id: { $in: sourceIds } }).distinct('title');
+        const docs = await DocumentMeta.find({ _id: { $in: sourceIds } });
+        if (docs.length === 0) {
+            return res.status(404).json({ error: 'Selected sources not found.' });
+        }
 
-        const dummyEmbeddings = await generateEmbeddings(['study overview summary']);
+        const sourceTitles = docs.map(d => d.title);
+        
+        // Sum up text from all selected documents
+        let combinedText = "";
 
-        const whereFilter = {
-            "$and": [
-                { "className": { "$eq": className || '2nd Year' } },
-                { "department": { "$eq": department || 'Computer Science' } }
-            ]
-        };
+        for (const doc of docs) {
+            const collectionName = doc.chromaCollectionRef || 'college_documents';
+            const dummyEmbeddings = await generateEmbeddings(['summary of ' + doc.title]);
+            
+            // Filter by the specific document name in this collection
+            const whereFilter = {
+                "$and": [
+                    { "source": { "$eq": doc.title } },
+                    { "department": { "$eq": doc.department || department } }
+                ]
+            };
 
-        const results = await queryCollection('college_documents', dummyEmbeddings, 20, whereFilter);
-        const sourceText = results.documents?.[0]?.join('\n\n') || 'No content retrieved.';
-        const truncatedText = sourceText.substring(0, 3000);
+            const results = await queryCollection(collectionName, dummyEmbeddings, 10, whereFilter);
+            const docText = results.documents?.[0]?.join('\n\n') || '';
+            combinedText += `\n\n--- DOCUMENT: ${doc.title} ---\n${docText}`;
+        }
+
+        const truncatedText = combinedText.substring(0, 4000) || 'No content retrieved.';
 
         // ── 2. Generate the spoken summary via Groq (llama-3.1-8b-instant) ──
         const summaryPrompt = `You are Aria, a warm and friendly university AI tutor. 
