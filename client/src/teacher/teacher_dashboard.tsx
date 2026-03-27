@@ -32,7 +32,10 @@ export default function TeacherDashboard() {
   const [uploadMetadata, setUploadMetadata] = useState({
     className: '1st Year',
     department: 'CSE',
+    semester: '',
     subject: '',
+    chapter: '',
+    section: '',
     module: ''
   });
 
@@ -138,7 +141,10 @@ export default function TeacherDashboard() {
         formData.append('title', file.name);
         formData.append('department', meta.department);
         formData.append('className', meta.className);
+        formData.append('semester', meta.semester);
         formData.append('subject', meta.subject);
+        formData.append('chapter', meta.chapter);
+        formData.append('section', meta.section);
         formData.append('module', meta.module);
 
         const apiResponse = await fetch('http://localhost:5000/api/documents/upload', {
@@ -238,23 +244,38 @@ export default function TeacherDashboard() {
                   <option value="4th Year">4th Year</option>
                 </select>
               </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white/50 mb-1">Department</label>
-                <select 
-                  value={uploadMetadata.department}
-                  onChange={(e) => setUploadMetadata({...uploadMetadata, department: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none [&>option]:bg-[#111]"
-                >
-                  <option value="CSE">Computer Science (CSE)</option>
-                  <option value="IT">Information Technology (IT)</option>
-                  <option value="ECE">Electronics (ECE)</option>
-                  <option value="MECH">Mechanical (MECH)</option>
-                </select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1">Department</label>
+                  <select 
+                    value={uploadMetadata.department}
+                    onChange={(e) => setUploadMetadata({...uploadMetadata, department: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none [&>option]:bg-[#111]"
+                  >
+                    <option value="CSE">Computer Science (CSE)</option>
+                    <option value="IT">Information Technology (IT)</option>
+                    <option value="ECE">Electronics (ECE)</option>
+                    <option value="MECH">Mechanical (MECH)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1">Semester</label>
+                  <select
+                    value={uploadMetadata.semester}
+                    onChange={(e) => setUploadMetadata({...uploadMetadata, semester: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none [&>option]:bg-[#111]"
+                  >
+                    <option value="">— optional —</option>
+                    {['Sem 1','Sem 2','Sem 3','Sem 4','Sem 5','Sem 6','Sem 7','Sem 8'].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1">Subject Name</label>
+                <label className="block text-xs font-medium text-white/50 mb-1">Subject Name <span className="text-violet-400">*</span></label>
                 <input 
                   type="text"
                   placeholder="e.g. Thermodynamics, Graph Theory"
@@ -262,6 +283,29 @@ export default function TeacherDashboard() {
                   onChange={(e) => setUploadMetadata({...uploadMetadata, subject: e.target.value})}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1">Chapter</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. Chapter 2 - Trees"
+                    value={uploadMetadata.chapter}
+                    onChange={(e) => setUploadMetadata({...uploadMetadata, chapter: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1">Section</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. Section 2.1"
+                    value={uploadMetadata.section}
+                    onChange={(e) => setUploadMetadata({...uploadMetadata, section: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-violet-500 outline-none"
+                  />
+                </div>
               </div>
 
               <div>
@@ -404,7 +448,7 @@ export default function TeacherDashboard() {
                   </div>
                   <h3 className="text-2xl font-semibold mb-2 relative z-10">Drag & Drop Materials</h3>
                   <p className="text-white/40 max-w-md relative z-10">
-                    Upload PDFs, TXTs, or DOCs. The system will automatically parse, chunk securely, and generate semantic embeddings for AI interactions.
+                    Upload PDFs, TXTs, or DOCX. The system will automatically parse, chunk securely, and generate semantic embeddings for AI interactions.
                   </p>
                   <div className="mt-8 px-6 py-2 rounded-full bg-white/10 border border-white/10 text-sm font-medium hover:bg-white/20 transition-all relative z-10"> Browse Files </div>
                   <input type="file" multiple accept=".txt,.pdf,.doc,.docx" className="hidden" ref={fileInputRef} onChange={(e) => handleFiles(e.target.files)} />

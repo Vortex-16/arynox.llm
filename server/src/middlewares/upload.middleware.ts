@@ -19,12 +19,18 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter to accept only PDFs for now
+// File filter to accept PDFs, TXTs, and DOCXs
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (file.mimetype === 'application/pdf' || file.mimetype === 'text/plain') {
+  const allowedMimeTypes = [
+    'application/pdf',
+    'text/plain',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF and TXT are allowed.'));
+    cb(new Error('Invalid file type. Only PDF, TXT, and DOCX are allowed.'));
   }
 };
 

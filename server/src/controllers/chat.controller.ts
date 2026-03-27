@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { queryCollection } from '../services/vectorstore.service';
+import { queryCollection, listCollections } from '../services/vectorstore.service';
 import { generateQueryEmbedding, getChatModel, getFallbackChatModel, SOCRATIC_SYSTEM_PROMPT, extractTopic } from '../services/llm.service';
+import { buildCollectionName } from '../services/document.service';
 import { searchBestYouTubeVideo } from '../services/youtube.service';
 import QueryLog from '../models/QueryLog';
 import ChatSession from '../models/ChatSession';
@@ -16,7 +17,7 @@ const isVideoRequest = (query: string): boolean => {
 
 export const askChat = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const { query, department, studentId, sessionId, className, sourceIds } = req.body;
+        const { query, department, studentId, sessionId, className, subject, chapter, section, sourceIds } = req.body;
         if (!query) {
              res.status(400).json({ error: 'Query is required.' });
              return;
@@ -55,8 +56,6 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
             ? `${recentHistory} ${query}`
             : query;
 
-        const chromaCollectionName = 'college_documents';
-        
         // -----------------------------------------------------
         // 1. ACADEMIC RELEVANCE CHECK
         // -----------------------------------------------------
@@ -104,16 +103,35 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
         const aiStrictness = settings?.aiStrictness || 'SOCRATIC';
         const confidenceThreshold = settings?.confidenceThreshold || 0.45;
 
-        // -----------------------------------------------------
-        // 2. VECTOR DATABASE RETRIEVAL (Isolated by Department)
-        // -----------------------------------------------------
-        // Mapping sourceIds to titles for vector filtering
+        // ─────────────────────────────────────────────────────────────────────────
+        // 2. COLLECTION RESOLUTION + VECTOR RETRIEVAL
+        //
+        // Priority:
+        //   A. Specific sourceIds selected by student → use each doc's stored collection
+        //   B. subject provided → route directly to the per-subject collection
+        //   C. department only → fan-out across all collections for that department
+        //   D. Fallback → legacy "college_documents" collection
+        // ─────────────────────────────────────────────────────────────────────────
+        const queryVec = await generateQueryEmbedding(contextualSearchQuery);
+
+        let collectionsToSearch: string[] = [];
         let sourceFilter: any = null;
+
         if (sourceIds && Array.isArray(sourceIds) && sourceIds.length > 0) {
+            // A. Student explicitly selected documents — look up their collections from MongoDB
             const docs = await DocumentMeta.find({ _id: { $in: sourceIds } });
-            const titles = docs.map(d => d.title);
-            if (titles.length > 0) {
-                // Combine department isolation with specific source selection
+            const titlesByCollection = new Map<string, string[]>();
+            docs.forEach(d => {
+                const col = d.chromaCollectionRef || 'college_documents';
+                if (!titlesByCollection.has(col)) titlesByCollection.set(col, []);
+                titlesByCollection.get(col)!.push(d.title);
+            });
+            collectionsToSearch = Array.from(titlesByCollection.keys());
+            // We'll apply a per-collection title filter in the fan-out loop below
+
+            // For simplicity when all docs share one collection, build a standard where-clause
+            if (collectionsToSearch.length === 1) {
+                const titles = titlesByCollection.get(collectionsToSearch[0])!;
                 sourceFilter = {
                     "$and": [
                         { "department": { "$eq": department || 'General' } },
@@ -121,22 +139,68 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
                     ]
                 };
             }
+        } else if (subject && department) {
+            // B. Subject known — use the dedicated per-subject collection
+            collectionsToSearch = [buildCollectionName(department, subject)];
+            // Optionally narrow by chapter / section
+            const andClauses: any[] = [
+                { department: { "$eq": department } }
+            ];
+            if (chapter) andClauses.push({ chapter: { "$eq": chapter } });
+            if (section) andClauses.push({ section: { "$eq": section } });
+            sourceFilter = andClauses.length > 1 ? { "$and": andClauses } : andClauses[0];
+        } else if (department) {
+            // C. Department known, no subject — fan-out across all dept collections
+            const deptSlug = department.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_');
+            collectionsToSearch = await listCollections(`${deptSlug}__`);
+            // Also include legacy flat collection so old uploads are still found
+            if (!collectionsToSearch.includes('college_documents')) {
+                collectionsToSearch.push('college_documents');
+            }
+            sourceFilter = { department: { "$eq": department } };
+        } else {
+            // D. No context at all — legacy fallback
+            collectionsToSearch = ['college_documents'];
         }
 
-        if (!sourceFilter) {
-            sourceFilter = department ? { department: { "$eq": department } } : null;
-        }
+        // Fan-out: query all relevant collections and merge results
+        type SearchResult = {
+            documents: string[][];
+            metadatas: any[][];
+            distances: number[][];
+        };
 
-        // Use context-enriched query for embedding so follow-up messages still find
-        // the right course documents (e.g. "i forgot the formula" alone would find nothing).
-        const queryVec = await generateQueryEmbedding(contextualSearchQuery);
-        const searchResults = await queryCollection(
-            chromaCollectionName, 
-            [queryVec], 
-            10, // Increased results for better filtering context
-            sourceFilter
-        );
-        
+        const mergedDocs:      string[] = [];
+        const mergedMetas:     any[]    = [];
+        const mergedDistances: number[] = [];
+
+        await Promise.all(collectionsToSearch.map(async (col) => {
+            try {
+                const result: SearchResult = await queryCollection(col, [queryVec], 10, sourceFilter);
+                (result?.documents?.[0]  || []).forEach((d, i) => {
+                    mergedDocs.push(d);
+                    mergedMetas.push(result.metadatas?.[0]?.[i] || {});
+                    mergedDistances.push(result.distances?.[0]?.[i] ?? 1);
+                });
+            } catch (err: any) {
+                // Collection might not exist yet — silently skip
+                console.warn(`[Chat] Skipping collection "${col}" (not found or error)`);
+            }
+        }));
+
+        // Sort merged results by distance (best match first) and cap to top-10
+        const merged = mergedDocs
+            .map((d, i) => ({ doc: d, meta: mergedMetas[i], dist: mergedDistances[i] }))
+            .sort((a, b) => a.dist - b.dist)
+            .slice(0, 10);
+
+        const searchResults = {
+            documents: [merged.map(m => m.doc)],
+            metadatas: [merged.map(m => m.meta)],
+            distances: [merged.map(m => m.dist)],
+        };
+
+
         // -----------------------------------------------------
         // 3. CONFIDENCE-BASED FILTERING
         // -----------------------------------------------------

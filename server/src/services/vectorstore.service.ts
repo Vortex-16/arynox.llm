@@ -80,3 +80,21 @@ export const deleteDocumentFromChroma = async (collectionName: string, sourceTit
 
 // Kept for backward compatibility — no longer needed
 export const getOrCreateCollection = async (_name: string) => null;
+
+/**
+ * Returns the names of all ChromaDB collections, optionally filtered by a
+ * department prefix (e.g. "cse__" to get only CSE subject collections).
+ * Used by the chat controller for fan-out queries when no specific subject
+ * context is provided.
+ */
+export const listCollections = async (deptPrefix?: string): Promise<string[]> => {
+    try {
+        const res = await axios.get(API_BASE);
+        const names: string[] = (res.data as any[]).map((c: any) => c.name as string);
+        if (!deptPrefix) return names;
+        return names.filter(n => n.startsWith(deptPrefix));
+    } catch (e: any) {
+        console.error('[ChromaDB] listCollections failed:', e?.response?.data || e.message);
+        return ['college_documents']; // safe fallback
+    }
+};

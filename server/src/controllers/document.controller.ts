@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import DocumentMeta from '../models/DocumentMeta';
-import { extractTextFromPDF, processDocumentAndStore } from '../services/document.service';
+import { extractTextFromFile, processDocumentAndStore, buildCollectionName } from '../services/document.service';
 import { deleteDocumentFromChroma } from '../services/vectorstore.service';
 import fs from 'fs';
 import path from 'path';
@@ -12,45 +12,52 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
             return;
         }
 
-        const { title, department, className, subject, module } = req.body;
+        const { title, department, className, semester, subject, chapter, section, module } = req.body;
         if (!title) {
             res.status(400).json({ error: 'Title is required in the request body.' });
             return;
         }
 
-        // Generate a collection name based on title or use a generic one like "college_documents"
-        // For department-wide sorting, let's use global collection and filter by metadata later
-        const chromaCollectionName = 'college_documents';
+        // ── Per-subject ChromaDB collection ───────────────────────────────────
+        // If a subject is provided, we route into its dedicated collection.
+        // Falls back to "college_documents" only when subject is absent (legacy uploads).
+        const chromaCollectionName = subject && department
+            ? buildCollectionName(department, subject)
+            : 'college_documents';
 
-        // 1. Extract text from the temporary PDF
-        const text = await extractTextFromPDF(req.file.path);
+        console.log(`[Upload] Routing "${title}" → collection: "${chromaCollectionName}"`);
 
-        // 2. Chunk and embed with the new metadata tags
+        // 1. Extract text from the temporary file (PDF, TXT, or DOCX)
+        const text = await extractTextFromFile(req.file.path);
+
+        // 2. Chunk and embed with full academic hierarchy metadata
         const chunkCount = await processDocumentAndStore(
             text,
             title,
             chromaCollectionName,
-            { className, department, subject, module }
+            { className, semester, department, subject, chapter, section, module }
         );
 
-        // 3. Save metadata to MongoDB including the newly saved file path
+        // 3. Save metadata to MongoDB
         const documentMeta = new DocumentMeta({
             title,
-            department: department || 'General',
-            className: className || '1st Year',
-            subject: subject || '',
-            module: module || '',
+            department:          department || 'General',
+            className:           className  || '1st Year',
+            semester:            semester   || '',
+            subject:             subject    || '',
+            chapter:             chapter    || '',
+            section:             section    || '',
+            module:              module     || '',
             chromaCollectionRef: chromaCollectionName,
-            fileUrl: `/uploads/${req.file.filename}` // Save URL for teacher portal
+            fileUrl:             `/uploads/${req.file.filename}`,
         });
         await documentMeta.save();
-
-        // Note: No longer deleting the file with fs.unlinkSync because the teacher needs to view it.
 
         res.status(201).json({
             message: 'Document uploaded and processed successfully.',
             documentMeta,
             chunksGenerated: chunkCount,
+            chromaCollection: chromaCollectionName,
         });
     } catch (error: any) {
         console.error("Upload Error (Full Detail):", error);
@@ -64,11 +71,13 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
 
 export const getDocuments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const { className, department } = req.query;
-        let filter: any = {};
+        const { className, department, semester, subject } = req.query;
+        const filter: any = {};
 
         if (className) filter.className = className;
         if (department) filter.department = department;
+        if (semester)   filter.semester   = semester;
+        if (subject)    filter.subject    = subject;
 
         const docs = await DocumentMeta.find(filter).sort({ uploadedAt: -1 });
         res.status(200).json(docs);
@@ -90,17 +99,12 @@ export const deleteDocument = async (req: Request, res: Response, next: NextFunc
         // 1. Delete actual file from uploads directory
         if (doc.fileUrl) {
             const filePath = path.join(process.cwd(), doc.fileUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-            // remove debug txt if exists
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
             const debugPath = `${filePath}_extracted_debug.txt`;
-            if (fs.existsSync(debugPath)) {
-                fs.unlinkSync(debugPath);
-            }
+            if (fs.existsSync(debugPath)) fs.unlinkSync(debugPath);
         }
 
-        // 2. Delete Vector Chunks from ChromaDB
+        // 2. Delete vector chunks from the correct per-subject ChromaDB collection
         if (doc.chromaCollectionRef) {
             await deleteDocumentFromChroma(doc.chromaCollectionRef, doc.title);
         }
