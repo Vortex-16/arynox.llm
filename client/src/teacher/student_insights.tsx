@@ -1,5 +1,5 @@
 import { BarChart3, Users, Network, TrendingUp, Search, Database, Loader2, Download, BookOpen, X, AlertTriangle, MessageCircle, Send, CheckCircle2, Eye } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 interface StuckStudent {
   studentId: string;
@@ -127,6 +127,7 @@ export default function StudentInsights() {
         // Mark the doubt as resolved — removes card from teacher's list
         await handleResolveDoubt({ studentId: selectedStuck.studentId, topic: selectedStuck.topic });
         setTeacherMessage('');
+        setRespondedIds(prev => new Set(prev).add(`${selectedStuck.studentId}_${selectedStuck.topic}`));
       }
     } catch (err) {
       console.error("Failed to send teacher response:", err);
