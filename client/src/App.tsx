@@ -20,13 +20,14 @@ function App() {
   const currentX = useRef(0);
   const [featuresProgress, setFeaturesProgress] = useState(0);
   const [teamProgress, setTeamProgress] = useState(0);
+  const [footerProgress, setFooterProgress] = useState(0);
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       // Normalize wheel delta for consistency
       const speed = 0.05;
-      // Range: 0-1600 (0-100: Hero→Features, 100-400: Features stacking, 400-500: →TeamMembers, 500-1600: Team animations)
-      targetX.current = Math.max(0, Math.min(1600, targetX.current + e.deltaY * speed));
+      // Range: 0-1700 (...Team animations 500-1600, Footer vertical 1600-1700)
+      targetX.current = Math.max(0, Math.min(1700, targetX.current + e.deltaY * speed));
     };
 
     window.addEventListener('wheel', handleWheel, { passive: true });
@@ -63,6 +64,10 @@ function App() {
       // Sync teamProgress — drives all animations (500-1600 range → 0-1100)
       const tp = Math.max(0, Math.min(1100, currentX.current - 500));
       setTeamProgress(prev => Math.abs(prev - tp) > 0.1 ? tp : prev);
+
+      // Sync footerProgress — footer slides up after team animations (1600-1700 → 0-100)
+      const fp2 = Math.max(0, Math.min(100, currentX.current - 1600));
+      setFooterProgress(prev => Math.abs(prev - fp2) > 0.1 ? fp2 : prev);
     };
 
     gsap.ticker.add(tick);
@@ -151,9 +156,9 @@ function App() {
                 <Features scrollProgress={featuresProgress} />
               </div>
 
-              {/* Slide 3: Team Members */}
+              {/* Slide 3: Team Members (with footer overlay) */}
               <div className="w-[100vw] h-full shrink-0">
-                <TeamMembers scrollProgress={teamProgress} />
+                <TeamMembers scrollProgress={teamProgress} footerProgress={footerProgress} />
               </div>
 
             </div>

@@ -1,10 +1,12 @@
 import React from "react";
+import logoSvg from "../assets/logo.svg";
 
 interface TeamMembersProps {
   scrollProgress?: number;
+  footerProgress?: number;
 }
 
-const TeamMembers: React.FC<TeamMembersProps> = ({ scrollProgress = 0 }) => {
+const TeamMembers: React.FC<TeamMembersProps> = ({ scrollProgress = 0, footerProgress = 0 }) => {
   const cl = (v: number) => Math.max(0, Math.min(1, v));
 
   // Phase 1: Grid divider lines draw (0-200)
@@ -111,6 +113,48 @@ const TeamMembers: React.FC<TeamMembersProps> = ({ scrollProgress = 0 }) => {
 
         </div>
       </div>
+
+      {/* ── FOOTER LAYER (black, slides up over Team Members) ── */}
+      {footerProgress > 0 && (
+        <div
+          className="absolute left-0 w-full h-full bg-black z-50 flex flex-col items-center justify-between px-8 py-12"
+          style={{ top: `${(1 - footerProgress / 100) * 100}vh` }}
+        >
+          {/* Logo — centered at top */}
+          <div className="flex justify-center w-full">
+            <img src={logoSvg} alt="Arynox Logo" className="w-[140px] lg:w-[200px] h-auto opacity-90" />
+          </div>
+
+          {/* Nav links — left / center / right */}
+          <div className="flex flex-col lg:flex-row items-center lg:justify-between gap-6 lg:gap-0 w-full max-w-4xl">
+            {[
+              { label: "Terms of Use",   href: "/terms.pdf"   },
+              { label: "Privacy Policy", href: "/privacy.pdf" },
+              { label: "GDPR Notice",    href: "/gdpr.pdf"    },
+            ].map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative overflow-hidden group inline-block px-4 py-2"
+              >
+                {/* #FF5458 rectangle that rises from bottom on hover */}
+                <span className="absolute inset-0 bg-[#FF5458] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                <span className="relative z-10 text-[#F9E95C] font-semibold text-[3.5vw] lg:text-[1.3vw] tracking-wide">
+                  {label}
+                </span>
+              </a>
+            ))}
+          </div>
+
+          {/* Copyright — bottom */}
+          <p className="text-[#F9E95C] text-[2.5vw] lg:text-[0.85vw] font-medium tracking-widest text-center opacity-70">
+            © ARYNOX.LLM ALL RIGHTS RESERVED 2026
+          </p>
+        </div>
+      )}
+
     </section>
   );
 };
