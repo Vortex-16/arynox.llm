@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User as UserIcon, Settings2, Share2, MessageSquare, PlusCircle, Pause, Play, BrainCircuit, ChevronRight, X, GraduationCap } from 'lucide-react';
+import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User as UserIcon, Settings2, Share2, MessageSquare, PlusCircle, Pause, Play, BrainCircuit, ChevronRight, X, GraduationCap, FileText } from 'lucide-react';
 import blobVideo from '../assets/blob_gradient.mov';
 import { Link, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -28,6 +28,7 @@ interface SourceDocument {
     name: string;
     wordCount: string;
     selected: boolean;
+    fileUrl?: string;
 }
 
 interface Doubt {
@@ -194,6 +195,7 @@ export default function Notebook() {
                             id: doc._id,
                             name: doc.title,
                             wordCount: 'Processed File',
+                            fileUrl: doc.fileUrl,
                             selected
                         };
                     });
@@ -525,6 +527,18 @@ export default function Notebook() {
                                     {src.name}
                                 </h3>
                             </div>
+                            {src.fileUrl && (
+                                <a 
+                                    href={`${API_BASE_URL}${src.fileUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 opacity-0 group-hover:opacity-100 hover:bg-white/5 rounded-lg transition-all"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="View PDF"
+                                >
+                                    <FileText className="w-4 h-4 text-[#8e918f]" />
+                                </a>
+                            )}
                         </div>
                     ))}
                     

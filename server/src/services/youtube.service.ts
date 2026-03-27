@@ -33,25 +33,25 @@ function extractTopicFromQuery(query: string): string {
  */
 export const searchBestYouTubeVideo = async (query: string): Promise<YouTubeVideoResult | null> => {
     const apiKey = process.env.YOUTUBE_API_KEY;
-    if (!apiKey) {
-        console.warn('[YouTube] YOUTUBE_API_KEY not set. Skipping video search.');
+    if (!apiKey || apiKey === 'your_youtube_data_api_v3_key') {
+        console.warn('[YouTube] ⚠️ YOUTUBE_API_KEY is MISSING or set to default placeholder in .env. Skipping video search.');
         return null;
     }
 
     const topic = extractTopicFromQuery(query);
-    console.log(`[YouTube] Searching for: "${topic}"`);
+    console.log(`[YouTube] 🔍 Searching for academic video: "${topic}"...`);
 
     try {
         // Step 1: Search for video candidates
         const searchRes = await axios.get(`${YT_API_BASE}/search`, {
             params: {
                 key: apiKey,
-                q: topic,
+                q: `${topic} educational tutorial explained`,
                 part: 'snippet',
                 type: 'video',
                 maxResults: 10,
                 relevanceLanguage: 'en',
-                videoCategoryId: '27', // Category 27 = Education
+                videoCategoryId: '27', // Education
                 order: 'relevance',
             }
         });

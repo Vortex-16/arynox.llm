@@ -651,6 +651,17 @@ export default function TeacherDashboard() {
                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             {doc.status === 'ready' && (
                                                                 <>
+                                                                    {doc.fileUrl && (
+                                                                        <a 
+                                                                            href={`${API_BASE_URL}${doc.fileUrl}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="p-2 text-white/30 hover:text-emerald-400 transition-all"
+                                                                            title="View Document"
+                                                                        >
+                                                                            <FileText className="w-4 h-4" />
+                                                                        </a>
+                                                                    )}
                                                                     <button 
                                                                         onClick={() => {
                                                                             setEditDoc(doc);

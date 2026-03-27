@@ -12,7 +12,7 @@ import { notifyAllTeachers } from './notifications.controller';
 
 /** Detects if the student is asking for a video/tutorial recommendation */
 const isVideoRequest = (query: string): boolean => {
-    return /\b(video|videos|youtube|tutorial|tutorials|lecture|watch|show me|find me a|recommend.*video|video.*on|video.*about|video.*for|link.*video|visual.*explain)\b/i.test(query);
+    return /\b(video|videos|youtube|tutorial|tutorials|lecture|watch|show me|find me a|recommend.*video|video.*on|video.*about|video.*for|video.*of|link.*video|visual.*explain|visual.*aid|animation)\b/i.test(query);
 };
 
 export const askChat = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -45,9 +45,12 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
 
         const activeSessionId = sessionId || Math.random().toString(36).substring(2, 15);
 
+        // ─── Semantic Topic Extraction (for search precision) ──────────────────────
+        const extractedTopic = await extractTopic(query);
+
         // ─── YouTube Video Intent Detection ───────────────────────────────────────
         const videoSearchPromise = isVideoRequest(query)
-            ? searchBestYouTubeVideo(query)
+            ? searchBestYouTubeVideo(extractedTopic !== 'General' ? extractedTopic : query)
             : Promise.resolve(null);
 
         let session = await ChatSession.findOne({ sessionId: activeSessionId });
@@ -273,19 +276,20 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
             if (isExamMode || aiStrictness === 'HINTS_ONLY') {
                 systemPromptText += `\n\n[EXAM MODE ACTIVE] Additional constraint on top of all existing rules:\n- You may NOT provide any explanations or direct answers — only Socratic guiding questions.\n- Your guiding questions must stay within the topic area covered by the context blocks.\n- Do NOT state any specific facts, formulas, or numerical values from pre-trained knowledge — only use what is in the context.\n- If you cannot form a meaningful question from the context, refuse with the standard refusal phrase.\n- Reply to concept overview requests with: "I'm in Exam Mode. I can only provide hints based on content found in your uploaded course materials."`;
             }
-        } else {
-            // No confident course material match — HARD REFUSAL regardless of exam mode.
-            // Do NOT add exam mode instructions here; they would let the LLM use pre-trained knowledge.
+        } else if (!youtubeVideo) {
+            // No confident course material match AND no video found — HARD REFUSAL.
             const refusalReason = !isConfident && searchResults?.documents?.[0]?.length > 0
                 ? "the available material is not specific enough to answer your question confidently"
                 : "no matching content was found in the uploaded course materials";
 
-            systemPromptText += `\n\n[HARD REFUSAL — DO NOT OVERRIDE] Because ${refusalReason}, you MUST refuse to answer. Do NOT use your pre-trained knowledge under any circumstances, even for hints or Socratic questions. Reply only: "I couldn't find information about this in your uploaded course materials, so I've forwarded your query to the faculty for review." — nothing else.`;
+            systemPromptText += `\n\n[HARD REFUSAL — DO NOT OVERRIDE] Because ${refusalReason}, you MUST refuse to answer. Do NOT use your pre-trained knowledge under any circumstances. Reply ONLY: "I couldn't find information about this in your uploaded course materials, so I've forwarded your query to the faculty for review." — nothing else.`;
         }
 
         // If a YouTube video was found, tell the LLM to respond naturally without meta-text
         if (youtubeVideo) {
-            systemPromptText += `\n\n[VIDEO FOUND] A relevant YouTube video has been automatically retrieved and will be displayed as a card directly in the UI — you do NOT need to mention it, describe it, or add any note about it. Simply give your normal Socratic response to the student's question. Do NOT write things like "[Video Resource]", "(Note: the video card...)", or any placeholder text about a video.`;
+            systemPromptText += `\n\n[UTILITY ALERT] A relevant YouTube video HAS been found and will be displayed as a card in the UI. 
+            You MUST acknowledge that you've found a video for them (e.g. "Sure! I've pulled up a great video on ${extractedTopic} for you..."). 
+            DO NOT be overly Socratic about the act of searching. Be helpful, then proceed with your Socratic guiding question related to the topic.`;
         }
 
         const systemMessage = new SystemMessage(systemPromptText);
@@ -334,8 +338,6 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
             // Do NOT append a note here — the LLM already outputs the full standard refusal phrase.
             // Adding text here causes the refusal to appear twice in the UI.
         }
-
-        const extractedTopic = await extractTopic(query);
 
         const log = new QueryLog({
              sessionId: activeSessionId,
