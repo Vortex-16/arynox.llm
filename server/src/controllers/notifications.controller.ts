@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 
 // In-memory store of connected clients
-// Key structure: `teacher_${id}` or `student_${id}`
-const clients = new Map<string, Response>();
+// Key: `teacher_${timestamp}` (multiple teachers) or `student_${studentId}`
+const clients = new Map<string, { res: Response; heartbeat: NodeJS.Timeout }>();
 
 /**
  * SSE Stream Endpoint
@@ -18,8 +18,12 @@ export const streamNotifications = (req: Request, res: Response) => {
     const connId = role === 'teacher' ? `teacher_${teacherId}` : `student_${studentId}`;
 
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Prevent nginx from buffering
+    // Explicit CORS for the SSE stream (cors() middleware doesn't cover this)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
 
     res.write(`data: ${JSON.stringify({ type: 'CONNECTED', message: `Connected as ${role}` })}\n\n`);
 
@@ -27,6 +31,7 @@ export const streamNotifications = (req: Request, res: Response) => {
     console.log(`[SSE] Client connected: ${connId}. Total active: ${clients.size}`);
 
     req.on('close', () => {
+        clearInterval(heartbeat);
         clients.delete(connId);
         console.log(`[SSE] Client disconnected: ${connId}.`);
     });

@@ -11,25 +11,6 @@ export default function App() {
     const navigate = useNavigate();
     const { login, isAuthenticated, user, loading } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
-    const [slideIndex, setSlideIndex] = useState(0);
-
-    const slides = [
-        {
-            image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1000&auto=format&fit=crop",
-            title: "Empowering your learning journey",
-            desc: "Join our Socratic AI platform to accelerate your studies."
-        },
-        {
-            image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop",
-            title: "Unlock Neural Insights",
-            desc: "Synthesize hundreds of documents in a matter of seconds."
-        },
-        {
-            image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop",
-            title: "Your Personal AI Tutor",
-            desc: "Experience interactive learning with dynamic quizzes and insights."
-        }
-    ];
 
     useEffect(() => {
         // Auto-login check via AuthContext
@@ -550,17 +531,21 @@ export default function App() {
 
     return (
         <>
-            <div className="left-panel" style={{ backgroundImage: `url(${slides[slideIndex].image})`, transition: 'background-image 1s ease-in-out' }}>
-                <div className="logo-text">ARYNOX</div>
-                <div className="bottom-text">
-                    <h2>{slides[slideIndex].title}</h2>
-                    <p>{slides[slideIndex].desc}</p>
-                    <div className="slider-dots">
-                        {slides.map((_, i) => (
-                            <span key={i} className={`dot ${i === slideIndex ? 'active' : ''}`}></span>
-                        ))}
-                    </div>
-                </div>
+            <div className="left-panel">
+                <WaterRipple 
+                    strength={0.8}
+                    viscosity={0.7}
+                    decay={0.8}
+                    chromaticDispersion={0.08}
+                    lightIntensity={0.85}
+                    lightColor="#F9E95C"
+                    speed={0.8}
+                    bgColor="#000000"
+                    text="arynox.llm"
+                    textColor="#F9E95C"
+                    rotationIntensity={0.2}
+                />
+                <div className="grain-overlay"></div>
             </div>
             
             <div className="container" ref={containerRef}>

@@ -12,11 +12,12 @@ export interface IQueryLog extends Document {
   department?: string;
   forwardedToTeacher: boolean;
   status: 'ANSWERED' | 'OUT_OF_SCOPE' | 'UNANSWERED_FORWARDED';
+  doubtResolved: boolean; // Set to true when teacher marks the doubt as resolved
 }
 
 const QueryLogSchema: Schema = new Schema({
   sessionId: { type: String, required: false },
-  studentId: { type: String, required: false }, // Optional if anonymous
+  studentId: { type: String, required: false },
   query: { type: String, required: true },
   response: { type: String, required: true },
   topic: { type: String, default: 'General' },
@@ -25,7 +26,8 @@ const QueryLogSchema: Schema = new Schema({
   timestamp: { type: Date, default: Date.now },
   department: { type: String, required: false },
   forwardedToTeacher: { type: Boolean, default: false },
-  status: { type: String, enum: ['ANSWERED', 'OUT_OF_SCOPE', 'UNANSWERED_FORWARDED'], default: 'ANSWERED' }
+  status: { type: String, enum: ['ANSWERED', 'OUT_OF_SCOPE', 'UNANSWERED_FORWARDED'], default: 'ANSWERED' },
+  doubtResolved: { type: Boolean, default: false }
 });
 
 export default mongoose.model<IQueryLog>('QueryLog', QueryLogSchema);

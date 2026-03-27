@@ -217,9 +217,9 @@ export const getStuckStudents = async (req: Request, res: Response): Promise<voi
     try {
         const THRESHOLD = 3;
 
-        // Step 1: Find (studentId, topic) pairs that appear >= THRESHOLD times
+        // Step 1: Find (studentId, topic) pairs >= THRESHOLD times (excluding already-resolved ones)
         const stuckGroups = await QueryLog.aggregate([
-            { $match: { studentId: { $ne: null }, topic: { $ne: null } } },
+            { $match: { studentId: { $ne: null }, topic: { $ne: null }, doubtResolved: { $ne: true } } },
             { $group: {
                 _id: { studentId: "$studentId", topic: "$topic" },
                 count: { $sum: 1 },

@@ -470,7 +470,11 @@ export default function TeacherDashboard() {
   if (!user) return null;
 
   return (
-    <div className="flex h-screen w-full bg-[#131314] text-white overflow-hidden font-['Outfit'] mesh-gradient">
+    <div className={`flex h-screen w-full text-white overflow-hidden font-['Outfit'] transition-colors duration-500 relative`}
+      style={{ backgroundColor: (activeTab === 'onboarding' || activeTab === 'classes') ? '#20B2AA' : '#FF5458' }}>
+      
+      {/* Grain effect overlay */}
+      <div className="grain-overlay" />
       
       {showMetadataModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -700,7 +704,8 @@ export default function TeacherDashboard() {
                     ))}
                   </div>
                 )}
-              </section>
+              </div>
+
             </div>
           )}
 

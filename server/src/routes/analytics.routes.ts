@@ -17,5 +17,6 @@ router.get('/students/:studentId/report', generateStudentReportPDF);
 router.get('/stuck-students', getStuckStudents);
 router.get('/subject-analytics', getSubjectAnalytics);
 router.post('/teacher-respond', teacherRespond);
+router.post('/resolve-doubt', resolveDoubt);
 
 export default router;
