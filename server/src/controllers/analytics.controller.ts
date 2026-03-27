@@ -107,7 +107,7 @@ export const getStudentsAcademicDetails = async (req: Request, res: Response): P
 
 export const generateStudentReportPDF = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { studentId } = req.params;
+        const studentId = req.params.studentId as string;
         const queries = await QueryLog.find({ studentId }).sort({ timestamp: 1 });
 
         if (!queries.length) {
