@@ -31,17 +31,25 @@ export default function StudentInsights() {
   const [isSending, setIsSending] = useState(false);
   const [respondedIds, setRespondedIds] = useState<Set<string>>(new Set());
 
+  const fetchStuckStudents = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/analytics/stuck-students');
+      if (res.ok) setStuckStudents(await res.json());
+    } catch (err) {
+      console.error("Failed to refresh stuck students", err);
+    }
+  };
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const [resAnalytics, resStudents, resStuck] = await Promise.all([
+        const [resAnalytics, resStudents] = await Promise.all([
             fetch('http://localhost:5000/api/analytics/insights'),
-            fetch('http://localhost:5000/api/analytics/students'),
-            fetch('http://localhost:5000/api/analytics/stuck-students')
+            fetch('http://localhost:5000/api/analytics/students')
         ]);
         if (resAnalytics.ok) setAnalytics(await resAnalytics.json());
         if (resStudents.ok) setStudents(await resStudents.json());
-        if (resStuck.ok) setStuckStudents(await resStuck.json());
+        await fetchStuckStudents();
       } catch (err) {
         console.error("Failed to load analytics", err);
       } finally {
@@ -49,6 +57,40 @@ export default function StudentInsights() {
       }
     };
     fetchAnalytics();
+
+    // ─── REAL-TIME NOTIFICATIONS (SSE) ──────────────────────────────────────
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
+    const eventSource = new EventSource('http://localhost:5000/api/notifications/stream?role=teacher');
+
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("[SSE] Event received:", data);
+
+        if (data.type === 'STUCK_STUDENT') {
+            // 1. Show native browser notification
+            if (Notification.permission === "granted") {
+                new Notification("Student Needs Help! 🚨", {
+                    body: `Student #${data.studentId.slice(-4).toUpperCase()} is stuck on "${data.topic}".`,
+                    icon: "/favicon.ico" // assuming one exists
+                });
+            }
+            
+            // 2. Refresh the stuck students list immediately
+            fetchStuckStudents();
+        }
+    };
+
+    eventSource.onerror = (err) => {
+        console.error("[SSE] Connection error:", err);
+        eventSource.close();
+    };
+
+    return () => {
+        eventSource.close();
+    };
   }, []);
 
   const handleTeacherRespond = async () => {

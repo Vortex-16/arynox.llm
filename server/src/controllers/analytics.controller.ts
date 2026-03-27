@@ -4,7 +4,7 @@ import ChatSession from '../models/ChatSession';
 import PDFDocument from 'pdfkit';
 import { getChatModel } from '../services/llm.service';
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-
+import { notifyStudent } from './notifications.controller';
 // Helper to consistently mask student IDs (e.g., student_123 -> Student 123)
 const mask = (id?: string) => {
     if (!id) return "Anonymous";
@@ -304,6 +304,13 @@ export const teacherRespond = async (req: Request, res: Response): Promise<void>
         } as any);
 
         await session.save();
+
+        // ─── TEACHER REPLY REAL-TIME ALERT ───────────────────────────────────
+        // Notify the student that the teacher has responded to their doubt
+        notifyStudent(studentId, { 
+            type: 'TEACHER_REPLY', 
+            topic: session.title || "your recent doubt"
+        });
 
         res.status(200).json({ success: true, sessionId: session.sessionId });
     } catch (error) {

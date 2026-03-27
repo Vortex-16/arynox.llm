@@ -7,6 +7,7 @@ import ChatSession from '../models/ChatSession';
 import SystemSetting from '../models/SystemSetting';
 import DocumentMeta from '../models/DocumentMeta';
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
+import { notifyTeacher } from './notifications.controller';
 
 /** Detects if the student is asking for a video/tutorial recommendation */
 const isVideoRequest = (query: string): boolean => {
@@ -263,6 +264,19 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
              forwardedToTeacher: forwarded
         });
         await log.save();
+
+        // ─── STUCK STUDENT REAL-TIME ALERT ──────────────────────────────────────
+        if (studentId && extractedTopic) {
+            const count = await QueryLog.countDocuments({ studentId, topic: extractedTopic });
+            if (count === 3) {
+                notifyTeacher({ 
+                    type: 'STUCK_STUDENT', 
+                    studentId, 
+                    topic: extractedTopic,
+                    query: query.substring(0, 60) + (query.length > 60 ? '...' : '') 
+                });
+            }
+        }
 
         res.status(200).json({
              answer: rawAnswer,

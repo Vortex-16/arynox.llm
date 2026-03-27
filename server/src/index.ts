@@ -10,6 +10,7 @@ import analyticsRoutes from './routes/analytics.routes';
 import authRoutes from './routes/auth.routes';
 import settingsRoutes from './routes/settings.routes';
 import audioRoutes from './routes/audio.routes';
+import notificationsRoutes from './routes/notifications.routes';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/audio', audioRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Static Asset Serving (Allows Teachers to View Uploaded PDFs)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

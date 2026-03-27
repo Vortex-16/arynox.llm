@@ -210,6 +210,45 @@ export default function Notebook() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // ─── REAL-TIME NOTIFICATIONS (SSE) ──────────────────────────────────────
+    useEffect(() => {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+
+        const eventSource = new EventSource(`http://localhost:5000/api/notifications/stream?role=student&studentId=${studentProfile.id}`);
+
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log("[SSE] Student event received:", data);
+
+            if (data.type === 'TEACHER_REPLY') {
+                // 1. Show native browser notification
+                if (Notification.permission === "granted") {
+                    new Notification("Teacher Responded! 🎓", {
+                        body: `A teacher has provided an explanation for: "${data.topic}"`,
+                        icon: "/favicon.ico"
+                    });
+                }
+
+                // 2. Refresh current session if active, or just the list
+                if (sessionId) {
+                    loadSession(sessionId);
+                }
+                fetchSessions();
+            }
+        };
+
+        eventSource.onerror = (err) => {
+            console.error("[SSE] Connection error:", err);
+            eventSource.close();
+        };
+
+        return () => {
+            eventSource.close();
+        };
+    }, [sessionId]);
+
     const toggleSource = (id: string) => {
         setSources((prev: SourceDocument[]) => prev.map((s: SourceDocument) => s.id === id ? { ...s, selected: !s.selected } : s));
     };

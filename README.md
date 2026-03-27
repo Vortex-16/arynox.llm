@@ -46,6 +46,15 @@
   - Default: `0.45` (balanced)
   - Maps directly to the ChromaDB cosine distance threshold. Lower values = tighter match required = fewer false-positive context retrievals.
 
+### 📊 Comprehensive Student Analytics
+- **Live Query Stream & Topic Clustering:** Real-time visibility into exactly what students are asking and AI-driven clustering of queries to identify trending difficulties across the class.
+- **"Student Needs Help" Detection:** Automatically flags students who repeatedly ask about the exact same topic (3+ times), signaling they are stuck and need human intervention.
+- **Direct Teacher Intervention:** Faculty can review the full doubt history (both the student's repeated queries and the AI's responses) and forcefully inject a direct, clear explanation straight into the student's ongoing chat session.
+- **AI-Generated Academic Reports:** One-click generation of professional, highly accurate PDF reports via Groq LLM. Evaluates a student's curiosity, strengths, and areas for improvement based strictly on their query history and learning patterns.
+- **Real-Time Push Notifications (SSE):** Dual-ended desktop alert system powered by Server-Sent Events.
+  - **Teacher Alerts:** Instantly notified (via browser `Notification` API) when a student hits the 3x repeat-topic threshold.
+  - **Student Alerts:** Instantly notified when a teacher has manually reviewed and provided a direct answer to their query.
+
 ### 🎬 YouTube Video Recommendations
 - **Automatic Video Search:** When a student asks for a video or tutorial (e.g., *"show me a video on Dijkstra's algorithm"*), the system automatically searches YouTube.
 - **Ranked by Quality:** Candidate videos are ranked using a composite score: `views × 0.6 + likes × 0.4` to surface the most popular and well-received content.
@@ -72,7 +81,7 @@
 | Component | Technology |
 | :--- | :--- |
 | **Frontend** | React, Vite, GSAP, Tailwind CSS, Lucide React |
-| **Backend** | Node.js, Express, TypeScript, Sharp (Image processing) |
+| **Backend** | Node.js, Express, TypeScript, Sharp, **PDFKit**, **Server-Sent Events (SSE)** |
 | **Database** | MongoDB (User data), ChromaDB (Vector store via REST API) |
 | **AI/LLM** | NVIDIA NIM (Nemotron-OCR, Nemotron-3 Chat, Llama-Embed), Groq API |
 | **Auth** | Google OAuth 2.0, JWT (JSON Web Tokens) |
