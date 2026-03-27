@@ -1,5 +1,21 @@
-import { BarChart3, Users, Network, TrendingUp, Search, Database, Loader2, Download, BookOpen, X } from 'lucide-react';
+import { BarChart3, Users, Network, TrendingUp, Search, Database, Loader2, Download, BookOpen, X, AlertTriangle, MessageCircle, Send, CheckCircle2, Eye } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+
+interface StuckStudent {
+  studentId: string;
+  anonymizedName: string;
+  topic: string;
+  repeatCount: number;
+  lastAsked: string;
+  sessionId: string | null;
+  queries: {
+    query: string;
+    response: string;
+    timestamp: string;
+    status: string;
+    sessionId: string;
+  }[];
+}
 
 export default function StudentInsights() {
   const [analytics, setAnalytics] = useState<any>(null);
@@ -8,15 +24,24 @@ export default function StudentInsights() {
   const [students, setStudents] = useState<any[]>([]);
   const [showStudentsModal, setShowStudentsModal] = useState(false);
 
+  // Stuck Students State
+  const [stuckStudents, setStuckStudents] = useState<StuckStudent[]>([]);
+  const [selectedStuck, setSelectedStuck] = useState<StuckStudent | null>(null);
+  const [teacherMessage, setTeacherMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [respondedIds, setRespondedIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const [resAnalytics, resStudents] = await Promise.all([
+        const [resAnalytics, resStudents, resStuck] = await Promise.all([
             fetch('http://localhost:5000/api/analytics/insights'),
-            fetch('http://localhost:5000/api/analytics/students')
+            fetch('http://localhost:5000/api/analytics/students'),
+            fetch('http://localhost:5000/api/analytics/stuck-students')
         ]);
         if (resAnalytics.ok) setAnalytics(await resAnalytics.json());
         if (resStudents.ok) setStudents(await resStudents.json());
+        if (resStuck.ok) setStuckStudents(await resStuck.json());
       } catch (err) {
         console.error("Failed to load analytics", err);
       } finally {
@@ -25,6 +50,31 @@ export default function StudentInsights() {
     };
     fetchAnalytics();
   }, []);
+
+  const handleTeacherRespond = async () => {
+    if (!selectedStuck || !teacherMessage.trim()) return;
+    setIsSending(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/analytics/teacher-respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: selectedStuck.studentId,
+          sessionId: selectedStuck.queries?.[0]?.sessionId || selectedStuck.sessionId,
+          message: teacherMessage
+        })
+      });
+      if (res.ok) {
+        const key = `${selectedStuck.studentId}_${selectedStuck.topic}`;
+        setRespondedIds(prev => new Set(prev).add(key));
+        setTeacherMessage('');
+      }
+    } catch (err) {
+      console.error("Failed to send teacher response:", err);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
@@ -53,6 +103,86 @@ export default function StudentInsights() {
           <div className="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-violet-400">92.4%</div>
           <div className="text-white/30 text-sm">High-fidelity RAG focus</div>
         </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* STUDENT NEEDS HELP — Prominent alert section */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="p-8 rounded-3xl bg-gradient-to-br from-red-500/[0.06] to-amber-500/[0.03] border border-red-500/20 relative overflow-hidden">
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-red-500/5 rounded-full blur-2xl" />
+        <div className="flex justify-between items-center mb-6 relative z-10">
+          <h3 className="text-xl font-semibold flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+            </div>
+            Student Needs Help
+            {stuckStudents.length > 0 && (
+              <span className="px-2.5 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-bold animate-pulse">
+                {stuckStudents.length} Alert{stuckStudents.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </h3>
+        </div>
+        <p className="text-sm text-white/40 mb-6 max-w-2xl relative z-10">
+          Students listed below have been repeatedly asking the same doubt. The AI tutor may not be explaining it effectively — your direct intervention can help.
+        </p>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-red-400/50" /></div>
+        ) : stuckStudents.length === 0 ? (
+          <div className="py-12 text-center">
+            <CheckCircle2 className="w-10 h-10 text-emerald-500/30 mx-auto mb-3" />
+            <p className="text-white/30 text-sm">All students are progressing well. No repeated doubts detected.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
+            {stuckStudents.map((stuck, idx) => {
+              const key = `${stuck.studentId}_${stuck.topic}`;
+              const hasResponded = respondedIds.has(key);
+              return (
+                <div key={idx} className={`p-5 rounded-2xl border flex flex-col gap-4 group transition-all ${
+                  hasResponded 
+                    ? 'bg-emerald-500/5 border-emerald-500/20' 
+                    : 'bg-white/5 border-red-500/10 hover:border-red-500/30'
+                }`}>
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wider font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded-md">
+                          {stuck.anonymizedName}
+                        </span>
+                        {hasResponded && (
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Responded
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-white/30">
+                        {new Date(stuck.lastAsked).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <h4 className="font-semibold text-white/90 text-sm mb-1 leading-snug">
+                      "{stuck.queries?.[0]?.query || 'Unknown query'}"
+                    </h4>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-bold uppercase tracking-tight">{stuck.topic}</span>
+                      <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-bold">
+                        Asked {stuck.repeatCount}x
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedStuck(stuck); setTeacherMessage(''); }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium transition-all cursor-pointer"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View Details & Respond
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Main Visualizations Grid */}
@@ -234,6 +364,115 @@ export default function StudentInsights() {
                       </div>
                   ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* STUCK STUDENT DETAIL MODAL */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {selectedStuck && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl relative">
+            <button 
+              onClick={() => setSelectedStuck(null)}
+              className="absolute top-6 right-6 p-2 text-white/40 hover:text-white transition-all bg-white/5 rounded-lg cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Student Needs Help</h3>
+                <p className="text-white/40 text-sm">{selectedStuck.anonymizedName} — Stuck on "{selectedStuck.topic}"</p>
+              </div>
+            </div>
+
+            {/* Meta badges */}
+            <div className="flex items-center gap-2 mb-6 mt-3">
+              <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-bold uppercase">
+                Asked {selectedStuck.repeatCount} times
+              </span>
+              <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-bold uppercase">
+                {selectedStuck.topic}
+              </span>
+              <span className="text-[10px] bg-white/5 text-white/40 px-2 py-0.5 rounded">
+                Last: {new Date(selectedStuck.lastAsked).toLocaleString()}
+              </span>
+            </div>
+
+            {/* Scrollable Query History */}
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4 mb-6">
+              <h4 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-2">Conversation History</h4>
+              {selectedStuck.queries.map((q, idx) => (
+                <div key={idx} className="rounded-2xl border border-white/5 overflow-hidden">
+                  {/* Student Question */}
+                  <div className="p-4 bg-red-500/[0.04] border-b border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageCircle className="w-3.5 h-3.5 text-red-400" />
+                      <span className="text-[10px] font-bold text-red-400 uppercase">Student Query</span>
+                      <span className="text-[10px] text-white/30 ml-auto">
+                        {new Date(q.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-white/90 text-sm leading-relaxed">{q.query}</p>
+                  </div>
+                  {/* AI Response */}
+                  <div className="p-4 bg-white/[0.02]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Database className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-[10px] font-bold text-violet-400 uppercase">AI Tutor Response</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ml-auto ${
+                        q.status === 'ANSWERED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                      }`}>{q.status}</span>
+                    </div>
+                    <p className="text-white/60 text-sm leading-relaxed">{q.response}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Teacher Response Input */}
+            <div className="border-t border-white/10 pt-5">
+              {respondedIds.has(`${selectedStuck.studentId}_${selectedStuck.topic}`) ? (
+                <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-400">Response Sent Successfully</p>
+                    <p className="text-xs text-white/40">Your answer has been injected into the student's chat session. They will see it the next time they open their conversation.</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 block">
+                    Write your response to the student
+                  </label>
+                  <div className="flex gap-3">
+                    <textarea
+                      value={teacherMessage}
+                      onChange={(e) => setTeacherMessage(e.target.value)}
+                      placeholder="Explain the concept clearly to help the student understand..."
+                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-red-500/50 resize-none h-20 placeholder:text-white/20"
+                    />
+                    <button
+                      onClick={handleTeacherRespond}
+                      disabled={isSending || !teacherMessage.trim()}
+                      className="px-5 rounded-xl bg-red-500 hover:bg-red-400 disabled:bg-red-500/30 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+                    >
+                      {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Send
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-white/25 mt-2">
+                    Your response will appear as a [Teacher Response] message in the student's chat session.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

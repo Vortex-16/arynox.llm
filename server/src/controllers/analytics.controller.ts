@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import QueryLog from '../models/QueryLog';
+import ChatSession from '../models/ChatSession';
 import PDFDocument from 'pdfkit';
 import { getChatModel } from '../services/llm.service';
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
@@ -205,5 +206,108 @@ You MUST respond IN PURE JSON format, strictly adhering to this schema and absol
     } catch (error) {
         console.error("Report Generation Error:", error);
         res.status(500).json({ error: 'Failed to generate report.' });
+    }
+};
+
+// ─── STUCK STUDENT DETECTION ────────────────────────────────────────────────────
+// Finds students who asked about the same topic 3+ times — a signal the AI tutor
+// isn't getting through and the teacher needs to step in.
+
+export const getStuckStudents = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const THRESHOLD = 3;
+
+        // Step 1: Find (studentId, topic) pairs that appear >= THRESHOLD times
+        const stuckGroups = await QueryLog.aggregate([
+            { $match: { studentId: { $ne: null }, topic: { $ne: null } } },
+            { $group: {
+                _id: { studentId: "$studentId", topic: "$topic" },
+                count: { $sum: 1 },
+                lastAsked: { $max: "$timestamp" },
+                sessionIds: { $addToSet: "$sessionId" }
+            }},
+            { $match: { count: { $gte: THRESHOLD } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        if (!stuckGroups.length) {
+            res.status(200).json([]);
+            return;
+        }
+
+        // Step 2: For each stuck group, pull the actual queries + AI responses
+        const results = await Promise.all(stuckGroups.map(async (group: any) => {
+            const queries = await QueryLog.find({
+                studentId: group._id.studentId,
+                topic: group._id.topic
+            })
+            .sort({ timestamp: -1 })
+            .limit(10)
+            .select('query response timestamp status sessionId');
+
+            return {
+                studentId: group._id.studentId,
+                anonymizedName: mask(group._id.studentId),
+                topic: group._id.topic,
+                repeatCount: group.count,
+                lastAsked: group.lastAsked,
+                sessionId: group.sessionIds?.[0] || null,
+                queries: queries.map((q: any) => ({
+                    query: q.query,
+                    response: q.response,
+                    timestamp: q.timestamp,
+                    status: q.status,
+                    sessionId: q.sessionId
+                }))
+            };
+        }));
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.error("Stuck Students Error:", error);
+        res.status(500).json({ error: 'Failed to detect stuck students.' });
+    }
+};
+
+// ─── TEACHER DIRECT RESPONSE ────────────────────────────────────────────────────
+// Injects a teacher's answer directly into the student's chat session so they
+// see it the next time they open the conversation.
+
+export const teacherRespond = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { studentId, sessionId, message } = req.body;
+
+        if (!studentId || !message) {
+            res.status(400).json({ error: 'studentId and message are required.' });
+            return;
+        }
+
+        // Find the student's most recent session (or a specific one if sessionId provided)
+        let session;
+        if (sessionId) {
+            session = await ChatSession.findOne({ sessionId });
+        }
+        if (!session) {
+            session = await ChatSession.findOne({ studentId }).sort({ updatedAt: -1 });
+        }
+
+        if (!session) {
+            res.status(404).json({ error: 'No chat session found for this student.' });
+            return;
+        }
+
+        // Inject the teacher's response as a system message
+        session.messages.push({
+            role: 'system',
+            content: `[Teacher Response] ${message}`,
+            timestamp: new Date()
+        } as any);
+
+        await session.save();
+
+        res.status(200).json({ success: true, sessionId: session.sessionId });
+    } catch (error) {
+        console.error("Teacher Respond Error:", error);
+        res.status(500).json({ error: 'Failed to send teacher response.' });
     }
 };
