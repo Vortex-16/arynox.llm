@@ -9,6 +9,7 @@ import StudentDashboard from './student/student_dashboard'
 import Notebook from './student/notebook'
 import logoSvg from './assets/logo.svg'
 import Features from './components/Features'
+import TeamMembers from './components/TeamMembers'
 import CustomCursor from './components/CustomCursor'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
@@ -18,13 +19,14 @@ function App() {
   const targetX = useRef(0);
   const currentX = useRef(0);
   const [featuresProgress, setFeaturesProgress] = useState(0);
+  const [teamProgress, setTeamProgress] = useState(0);
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       // Normalize wheel delta for consistency
       const speed = 0.05;
-      // Range is now 0-200 (0-100 for Home->Features, 100-200 for Features Transition)
-      targetX.current = Math.max(0, Math.min(400, targetX.current + e.deltaY * speed));
+      // Range: 0-1600 (0-100: Hero→Features, 100-400: Features stacking, 400-500: →TeamMembers, 500-1600: Team animations)
+      targetX.current = Math.max(0, Math.min(1600, targetX.current + e.deltaY * speed));
     };
 
     window.addEventListener('wheel', handleWheel, { passive: true });
@@ -38,15 +40,29 @@ function App() {
       currentX.current += (targetX.current - currentX.current) * lerpFactor;
       
       if (sliderRef.current) {
-        // Clamp slider x to -100vw since Features stays pinned while layering Feature 2
-        const xPos = Math.min(currentX.current, 100);
+        // Three-phase x position:
+        // 0-100:   slides from Hero to Features
+        // 100-400: pinned at 100vw (Features internal stacking)
+        // 400-500: slides from Features to TeamMembers — then PINNED at 200vw
+        let xPos: number;
+        if (currentX.current <= 100) {
+          xPos = currentX.current;
+        } else if (currentX.current <= 400) {
+          xPos = 100;
+        } else {
+          // Cap at 200 so the slider never goes beyond TeamMembers
+          xPos = Math.min(200, 100 + (currentX.current - 400));
+        }
         gsap.set(sliderRef.current, { x: `-${xPos}vw` });
       }
 
-      // Sync featuresProgress state so Features re-renders reactively
-      // Only update when value changes meaningfully to avoid 60fps re-renders
-      const fp = Math.max(0, currentX.current - 100);
+      // Sync featuresProgress — capped at 300 (max for 4-page stacking)
+      const fp = Math.max(0, Math.min(300, currentX.current - 100));
       setFeaturesProgress(prev => Math.abs(prev - fp) > 0.1 ? fp : prev);
+
+      // Sync teamProgress — drives all animations (500-1600 range → 0-1100)
+      const tp = Math.max(0, Math.min(1100, currentX.current - 500));
+      setTeamProgress(prev => Math.abs(prev - tp) > 0.1 ? tp : prev);
     };
 
     gsap.ticker.add(tick);
@@ -59,7 +75,7 @@ function App() {
       <Routes>
         <Route path="/" element={
           <div ref={horizontalRef} className="relative w-full h-screen overflow-hidden bg-[#FF5458]">
-            <div ref={sliderRef} className="flex h-full w-[200vw]">
+            <div ref={sliderRef} className="flex h-full w-[300vw]">
               
               {/* Slide 1: Hero */}
               <main className="relative w-[100vw] h-full flex flex-col items-center bg-[#FF5458] overflow-hidden shrink-0">
@@ -133,6 +149,11 @@ function App() {
               {/* Slide 2: Features */}
               <div className="w-[100vw] h-full shrink-0">
                 <Features scrollProgress={featuresProgress} />
+              </div>
+
+              {/* Slide 3: Team Members */}
+              <div className="w-[100vw] h-full shrink-0">
+                <TeamMembers scrollProgress={teamProgress} />
               </div>
 
             </div>
