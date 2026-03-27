@@ -27,7 +27,12 @@ export const streamNotifications = (req: Request, res: Response) => {
 
     res.write(`data: ${JSON.stringify({ type: 'CONNECTED', message: `Connected as ${role}` })}\n\n`);
 
-    clients.set(connId, res);
+    // Keep connection alive with heartbeat
+    const heartbeat = setInterval(() => {
+        res.write(': keepalive\n\n');
+    }, 30000);
+
+    clients.set(connId, { res, heartbeat });
     console.log(`[SSE] Client connected: ${connId}. Total active: ${clients.size}`);
 
     req.on('close', () => {
@@ -42,9 +47,9 @@ export const streamNotifications = (req: Request, res: Response) => {
  */
 export const notifyTeacher = (teacherId: string, payload: any) => {
     const key = `teacher_${teacherId}`;
-    const res = clients.get(key);
-    if (res) {
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    const client = clients.get(key);
+    if (client) {
+        client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
         console.log(`[SSE] Sent ALERT to teacher ${teacherId}.`);
     }
 };
@@ -53,9 +58,9 @@ export const notifyTeacher = (teacherId: string, payload: any) => {
  * Broadcasts to all connected teachers
  */
 export const notifyAllTeachers = (payload: any) => {
-    for (const [key, res] of clients.entries()) {
+    for (const [key, client] of clients.entries()) {
         if (key.startsWith('teacher_')) {
-            res.write(`data: ${JSON.stringify(payload)}\n\n`);
+            client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
         }
     }
     console.log(`[SSE] Broadcasted alert to all teachers.`);
@@ -66,9 +71,9 @@ export const notifyAllTeachers = (payload: any) => {
  */
 export const notifyStudent = (studentId: string, payload: any) => {
     const key = `student_${studentId}`;
-    const res = clients.get(key);
-    if (res) {
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    const client = clients.get(key);
+    if (client) {
+        client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
         console.log(`[SSE] Sent REPLY to student ${studentId}.`);
     }
 };

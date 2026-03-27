@@ -99,7 +99,7 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
             muted
             loop
             playsInline
-            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto mix-blend-screen brightness-150 contrast-125"
           />
         </div>
       </div>
@@ -146,7 +146,7 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
             muted
             loop
             playsInline
-            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto mix-blend-screen brightness-150 contrast-125"
           />
         </div>
       </div>
@@ -181,7 +181,7 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
               muted
               loop
               playsInline
-              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto mix-blend-screen brightness-150 contrast-125"
             />
           </div>
         </div>
@@ -217,7 +217,7 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
               muted
               loop
               playsInline
-              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto mix-blend-screen brightness-150 contrast-125"
             />
           </div>
         </div>

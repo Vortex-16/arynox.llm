@@ -1,6 +1,7 @@
-import { BarChart3, Users, Network, TrendingUp, Search, Database, Loader2, Download, BookOpen, X, AlertTriangle, MessageCircle, Send, CheckCircle2, Eye } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { BarChart3, Users, TrendingUp, Search, Database, Loader2, Download, BookOpen, X, AlertTriangle, MessageCircle, Send, CheckCircle2, Eye, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 interface StuckStudent {
   studentId: string;
@@ -35,7 +36,7 @@ export default function StudentInsights() {
 
   const fetchStuckStudents = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/analytics/stuck-students', {
+      const res = await fetch(`${API_BASE_URL}/api/analytics/stuck-students`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setStuckStudents(await res.json());
@@ -48,10 +49,10 @@ export default function StudentInsights() {
     const fetchAnalytics = async () => {
       try {
         const [resAnalytics, resStudents] = await Promise.all([
-            fetch('http://localhost:5000/api/analytics/insights', {
+            fetch(`${API_BASE_URL}/api/analytics/insights`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             }),
-            fetch('http://localhost:5000/api/analytics/students', {
+            fetch(`${API_BASE_URL}/api/analytics/students`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
         ]);
@@ -71,7 +72,7 @@ export default function StudentInsights() {
         Notification.requestPermission();
     }
 
-    const eventSource = new EventSource('http://localhost:5000/api/notifications/stream?role=teacher');
+    const eventSource = new EventSource(`${API_BASE_URL}/api/notifications/stream?role=teacher`);
 
     eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -103,9 +104,9 @@ export default function StudentInsights() {
 
   const handleResolveDoubt = async (student: { studentId: string; topic: string }) => {
     try {
-      await fetch('http://localhost:5000/api/analytics/resolve-doubt', {
+      await fetch(`${API_BASE_URL}/api/analytics/resolve-doubt`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ studentId: student.studentId, topic: student.topic })
       });
       // Immediately remove from UI
@@ -122,7 +123,7 @@ export default function StudentInsights() {
     if (!selectedStuck || !teacherMessage.trim()) return;
     setIsSending(true);
     try {
-      const res = await fetch('http://localhost:5000/api/analytics/teacher-respond', {
+      const res = await fetch(`${API_BASE_URL}/api/analytics/teacher-respond`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

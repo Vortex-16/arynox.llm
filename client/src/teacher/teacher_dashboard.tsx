@@ -11,7 +11,7 @@ import { API_BASE_URL } from '../config';
 
 // Simulated states for processing pipeline
 type DocState = 'uploading' | 'parsing' | 'chunking' | 'embedding' | 'ready' | 'error';
-type TabState = 'overview' | 'documents' | 'analytics' | 'classes' | 'settings' | 'doubts' | 'subject_hub' | 'profile';
+type TabState = 'overview' | 'documents' | 'analytics' | 'classes' | 'settings' | 'doubts' | 'subject_hub' | 'profile' | 'onboarding';
 
 interface DocumentFile {
   id: string;
@@ -704,7 +704,7 @@ export default function TeacherDashboard() {
                     ))}
                   </div>
                 )}
-              </div>
+              </section>
 
             </div>
           )}

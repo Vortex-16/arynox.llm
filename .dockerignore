@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+server/node_modules
+server/dist
+client/node_modules
+client/dist
+.env
+uploads
+my_local_chroma_data
+chroma_data
+venv_chroma
+*.local.db

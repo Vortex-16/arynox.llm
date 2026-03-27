@@ -4,6 +4,7 @@ import { useGSAP } from '@gsap/react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useNavigate } from 'react-router-dom'; // Ensure useNavigate is imported correctly
 import { useAuth } from '../../../context/AuthContext';
+import WaterRipple from '../../../components/WaterRipple';
 import './index.css';
 
 export default function App() {
@@ -26,17 +27,13 @@ export default function App() {
             }
         }
 
-        const timer = setInterval(() => {
-            setSlideIndex((prev) => (prev + 1) % slides.length);
-        }, 5000);
-        return () => clearInterval(timer);
-    }, [slides.length, navigate, isAuthenticated, user, loading]);
+    }, [navigate, isAuthenticated, user, loading]);
 
     const handleGoogleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
             setIsLoading(true);
             try {
-                const res = await fetch('http://localhost:5000/api/auth/google', {
+                const res = await fetch('/api/auth/google', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ googleToken: tokenResponse.access_token })
@@ -191,7 +188,7 @@ export default function App() {
 
                 setIsLoading(true);
                 try {
-                    const res = await fetch('http://localhost:5000/api/auth/login', {
+                    const res = await fetch('/api/auth/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, password })
@@ -540,7 +537,7 @@ export default function App() {
                     lightIntensity={0.85}
                     lightColor="#F9E95C"
                     speed={0.8}
-                    bgColor="#000000"
+                    bgColor="#FF5458"
                     text="arynox.llm"
                     textColor="#F9E95C"
                     rotationIntensity={0.2}

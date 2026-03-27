@@ -38,10 +38,19 @@ app.use('/api/doubts', doubtRoutes);
 // Static Asset Serving (Allows Teachers to View Uploaded PDFs)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Basic Route
-app.get('/', (req: Request, res: Response) => {
-  res.send('Arynox Server is running!');
-});
+// Serve Client Frontend (Production)
+if (process.env.NODE_ENV === 'production') {
+    const publicPath = path.join(process.cwd(), 'public');
+    app.use(express.static(publicPath));
+    app.get('*all', (req: Request, res: Response) => {
+        res.sendFile(path.join(publicPath, 'index.html'));
+    });
+} else {
+    // Basic Route
+    app.get('/', (req: Request, res: Response) => {
+        res.send('Arynox Server is running in development mode!');
+    });
+}
 
 // Global Error Handler — must have 4 args so Express recognises it as an error handler
 // Catches Multer limit errors, unhandled throws etc. and always returns JSON (never HTML)
@@ -56,7 +65,17 @@ const MONGODB_URI = process.env.MONGODB_URI || '';
 if (MONGODB_URI) {
   mongoose
     .connect(MONGODB_URI)
-    .then(() => console.log('✅ Connected to MongoDB'))
+    .then(async () => {
+      console.log('✅ Connected to MongoDB');
+      // Fix for stale non-sparse googleId index on existing clusters
+      try {
+        const User = mongoose.model('User');
+        await User.collection.dropIndex('googleId_1');
+        console.log('♻️  Rebuilt stale unique index.');
+      } catch (e) {
+        // Index might not exist yet, which is fine
+      }
+    })
     .catch(() => {
       console.warn('\x1b[33m%s\x1b[0m', '⚠️  MongoDB connection failed. Analytics/Logs will be unavailable.');
     });

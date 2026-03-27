@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
     Users, BookOpen, GraduationCap, Building2, 
     TrendingUp, AlertTriangle, ChevronRight, BarChart3,
-    PieChart, Activity, Search, LogOut, MessageSquare
+    Activity, Search, LogOut, MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAnalyticsData, getStudentsAcademicDetails, generateStudentReportPDF, getStuckStudents, teacherRespond, getUniversityOverview, getSubjectAnalytics } from '../controllers/analytics.controller';
+import { getAnalyticsData, getStudentsAcademicDetails, generateStudentReportPDF, getStuckStudents, teacherRespond, getUniversityOverview, getSubjectAnalytics, resolveDoubt } from '../controllers/analytics.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router = Router();
