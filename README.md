@@ -25,10 +25,45 @@
 - **Custom Aesthetic:** Premium typography (using the *Aquire* font) and smooth glassmorphism effects.
 
 ### 📚 Adaptive Learning & RAG
-- **Socratic Engine:** Uses RAG (Retrieval Augmented Generation) configured with Groq LLaMA 3.1 to answer strictly from uploaded course materials.
-- **Intelligent Fallback:** If course material doesn't contain the answer, ARYNOX provides a general academic explanation with a "Faculty response pending" disclaimer.
+- **Socratic Engine:** Uses RAG (Retrieval Augmented Generation) configured with Groq LLaMA 3.1 to guide students through uploaded course materials using inquiry-based learning.
+- **Absolute Context Lock (`STRICT CONTEXT-ONLY` mode):** The AI operates under a strict rule-set — it has no access to pre-trained knowledge. All responses must be grounded in the retrieved context blocks from uploaded documents.
+- **Topic-Level Verification:** Before every response, the AI verifies that the retrieved context covers the general topic being discussed — refusing cleanly if the context is completely unrelated.
+- **No Context Leaking:** The AI never reproduces raw context block text in its replies. Students always see natural conversation, not document dumps.
 - **ChromaDB REST Integration:** Bypasses unreliable library wrappers for direct, high-performance REST interaction with 2048-dimension vector support.
-- **Teacher Forwarding Loop:** Out-of-scope academic questions are intercepted and logged for manual faculty review on the dashboard.
+- **Teacher Forwarding Loop:** Unanswerable queries are flagged as `UNANSWERED_FORWARDED` and surfaced in the faculty dashboard for manual review.
+
+### 🧠 Conversation Intelligence
+- **Context-Aware Vector Search:** For follow-up messages (e.g., `"i forgot"`, `"2n"`, `"go on"`), the system enriches the embedding query with the last 3 conversation turns — ensuring short replies still find the right course documents in ChromaDB instead of triggering a false refusal.
+- **Continuous Session Memory:** Full conversation history is stored per-session in MongoDB and injected into every LLM call, enabling coherent multi-turn Socratic dialogue.
+- **Smart Follow-Up Detection:** Academic relevance classification is skipped for active sessions — mid-conversation replies are always treated as in-scope, saving a full LLM round-trip per message.
+- **Conversation-Aware Topic Check:** The mandatory pre-response check passes recent conversation history to the LLM, allowing it to correctly evaluate short follow-up replies in context rather than as standalone queries.
+
+### ⚙️ Faculty AI Controls
+- **Exam Mode:** Restricts the AI to Socratic guiding questions only — no explanations, no confirmations, no direct answers. Questions must stay within the topic area covered by the uploaded context.
+- **Normal Mode:** AI guides students progressively, confirming correct answers and providing increasing clarification across follow-up turns.
+- **AI Scope Confidence Slider:** Controls the minimum retrieval confidence required before the AI attempts an answer.
+  - Range: `0.1` (High Sensitivity — only answers on very precise matches) → `0.9` (Strict — answers even on loose contextual matches)
+  - Default: `0.45` (balanced)
+  - Maps directly to the ChromaDB cosine distance threshold. Lower values = tighter match required = fewer false-positive context retrievals.
+
+### 🎬 YouTube Video Recommendations
+- **Automatic Video Search:** When a student asks for a video or tutorial (e.g., *"show me a video on Dijkstra's algorithm"*), the system automatically searches YouTube.
+- **Ranked by Quality:** Candidate videos are ranked using a composite score: `views × 0.6 + likes × 0.4` to surface the most popular and well-received content.
+- **Rich Video Card:** Results are displayed as an embedded card in the chat — showing the thumbnail, title, channel, view/like counts, and a direct Watch on YouTube link.
+- **Non-blocking:** The YouTube search runs in parallel with the LLM call, adding zero latency to the chat response.
+
+---
+
+## 🔍 AI Behaviour Reference
+
+| Scenario | Exam Mode ON | Exam Mode OFF |
+| :--- | :--- | :--- |
+| Topic found in course materials | Socratic questions only — no confirmations, no hints beyond the context | Guiding questions → progressively confirms correct answers |
+| Topic NOT in materials | Hard refusal → forwarded to faculty | Same hard refusal |
+| Short follow-up (`"i forgot"`, `"2n"`) | Continues conversation using enriched context search | Continues conversation using enriched context search |
+| Video request (`"show me a tutorial on..."`) | Finds & embeds best YouTube video | Finds & embeds best YouTube video |
+| Off-topic / spam (new session only) | Rejected at academic relevance check | Rejected at academic relevance check |
+| Raw context blocks shown to student | Never — RULE 6 prevents leaking | Never — RULE 6 prevents leaking |
 
 ---
 
@@ -41,6 +76,7 @@
 | **Database** | MongoDB (User data), ChromaDB (Vector store via REST API) |
 | **AI/LLM** | NVIDIA NIM (Nemotron-OCR, Nemotron-3 Chat, Llama-Embed), Groq API |
 | **Auth** | Google OAuth 2.0, JWT (JSON Web Tokens) |
+| **Video** | YouTube Data API v3 |
 
 ---
 
@@ -78,6 +114,7 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 GROQ_API_KEY=your_groq_api_key
 NVIDIA_API_KEY=nvapi-your_nvidia_nim_key
 CHROMA_URL=http://localhost:8000
+YOUTUBE_API_KEY=your_youtube_data_api_v3_key
 ```
 
 ### 4. Running the Project
@@ -107,7 +144,10 @@ npm run dev
 │   │   └── components/     # Reusable UI primitives
 ├── server/                 # Express backend (TypeScript)
 │   ├── src/
-│   │   ├── services/       # OCR, VectorStore, LLM logic
+│   │   ├── services/       # OCR, VectorStore, LLM, YouTube logic
+│   │   │   ├── llm.service.ts        # Groq/NVIDIA LLM + embeddings + system prompt
+│   │   │   ├── youtube.service.ts    # YouTube Data API v3 search & ranking
+│   │   │   └── vectorstore.service.ts
 │   │   ├── controllers/    # RAG & Document orchestration
 │   │   └── routes/         # Backend API Map
 └── PRD.md                  # Project Requirements Document

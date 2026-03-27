@@ -1,12 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, CheckSquare, Square, FileText, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MoreVertical, MessageSquare, PlusCircle } from 'lucide-react';
+import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User, Settings2, Share2, MessageSquare, PlusCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+
+interface YouTubeVideo {
+    videoId: string;
+    title: string;
+    channelTitle: string;
+    thumbnailUrl: string;
+    viewCount: number;
+    likeCount: number;
+    url: string;
+}
 
 interface ChatMessage {
     id: string;
     role: 'user' | 'assistant';
     content: string;
+    youtubeVideo?: YouTubeVideo;
 }
 
 interface SourceDocument {
@@ -14,6 +25,87 @@ interface SourceDocument {
     name: string;
     wordCount: string;
     selected: boolean;
+}
+
+/** Formats large numbers to readable shorthand: 1200000 → 1.2M */
+function formatCount(n: number): string {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    return n.toString();
+}
+
+function YouTubeVideoCard({ video }: { video: YouTubeVideo }) {
+    return (
+        <a
+            href={video.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group block mt-4 rounded-2xl overflow-hidden border border-[#444746]/50 bg-[#1a1b1c] hover:border-red-500/50 transition-all duration-300 hover:shadow-[0_0_24px_rgba(239,68,68,0.15)] no-underline"
+            style={{ textDecoration: 'none' }}
+        >
+            {/* Thumbnail */}
+            <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                <img
+                    src={video.thumbnailUrl}
+                    alt={video.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                {/* Play overlay */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/30">
+                    <div className="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center shadow-xl">
+                        <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </div>
+                </div>
+                {/* YouTube badge */}
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                    <svg className="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                    </svg>
+                    <span className="text-[11px] font-semibold text-white">YouTube</span>
+                </div>
+            </div>
+
+            {/* Info */}
+            <div className="p-4">
+                <h4 className="text-[14px] font-semibold text-[#e3e3e3] line-clamp-2 leading-snug mb-1.5 group-hover:text-white transition-colors" style={{ textDecoration: 'none' }}>
+                    {video.title}
+                </h4>
+                <p className="text-[12px] text-[#8e918f] mb-3" style={{ textDecoration: 'none' }}>
+                    {video.channelTitle}
+                </p>
+
+                {/* Stats */}
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 text-[12px] text-[#c4c7c5]">
+                        <svg className="w-3.5 h-3.5 text-[#8e918f]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        <span className="font-medium">{formatCount(video.viewCount)}</span>
+                        <span className="text-[#8e918f]">views</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[12px] text-[#c4c7c5]">
+                        <svg className="w-3.5 h-3.5 text-[#8e918f]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+                            <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                        </svg>
+                        <span className="font-medium">{formatCount(video.likeCount)}</span>
+                        <span className="text-[#8e918f]">likes</span>
+                    </div>
+                    <div className="ml-auto">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600/10 border border-red-500/20 text-red-400 text-[12px] font-medium group-hover:bg-red-600 group-hover:text-white group-hover:border-red-600 transition-all duration-300">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Watch Now
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </a>
+    );
 }
 
 export default function Notebook() {
@@ -164,7 +256,8 @@ export default function Notebook() {
                 setMessages((prev: ChatMessage[]) => [...prev, {
                     id: (Date.now() + 1).toString(),
                     role: 'assistant',
-                    content: data.answer
+                    content: data.answer,
+                    ...(data.youtubeVideo && { youtubeVideo: data.youtubeVideo })
                 }]);
             } else {
                 throw new Error(data.error || 'Failed to fetch from backend router');
@@ -361,6 +454,9 @@ export default function Notebook() {
                                             {isAI ? (
                                                 <div className="prose prose-invert prose-p:leading-relaxed max-w-none text-[#e3e3e3]">
                                                     <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                                    {msg.youtubeVideo && (
+                                                        <YouTubeVideoCard video={msg.youtubeVideo} />
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <div className="inline-block bg-[#1e1f20] px-4 py-2.5 rounded-[20px] rounded-tl-sm text-[#e3e3e3]">
@@ -395,22 +491,6 @@ export default function Notebook() {
                 <div className="absolute bottom-6 w-full px-4 lg:px-24 pointer-events-none z-30">
                     <div className="max-w-[800px] mx-auto pointer-events-auto flex flex-col gap-3">
                         
-                        {/* Suggested Questions Pills */}
-                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
-                            {[
-                                "Explain the second law in simple terms",
-                                "Compare my notes to the syllabus",
-                                "Provide a critical analysis"
-                            ].map(suggestion => (
-                                <button
-                                    key={suggestion}
-                                    onClick={() => setInputMessage(suggestion)}
-                                    className="whitespace-nowrap px-4 py-2 rounded-full border border-[#444746] bg-[#1e1f20] text-[13px] text-[#c4c7c5] hover:bg-[#282a2c] hover:text-[#e3e3e3] transition-colors"
-                                >
-                                    {suggestion}
-                                </button>
-                            ))}
-                        </div>
 
                         {/* Input Area */}
                         <form onSubmit={handleSendMessage} className="relative flex items-center bg-[#1e1f20] border border-[#444746]/80 rounded-[32px] shadow-lg p-2 focus-within:border-[#8e918f] transition-colors">
