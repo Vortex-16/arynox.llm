@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import logoSvg from "../assets/logo.svg";
 
 interface TeamMembersProps {
@@ -120,9 +121,11 @@ const TeamMembers: React.FC<TeamMembersProps> = ({ scrollProgress = 0, footerPro
           className="absolute left-0 w-full h-full bg-black z-50 flex flex-col items-center justify-between px-8 py-12"
           style={{ top: `${(1 - footerProgress / 100) * 100}vh` }}
         >
-          {/* Logo — centered at top */}
-          <div className="flex justify-center w-full">
+          {/* Logo with Login/SignUp — single row */}
+          <div className="flex items-center justify-center gap-6 w-full">
+            <Link to="/login" className="px-8 py-3 rounded-full border border-[#F9E95C]/30 text-[#F9E95C] hover:bg-[#F9E95C] hover:text-[#FF5458] transition-all font-bold text-[15px] shadow-lg backdrop-blur-sm">Login</Link>
             <img src={logoSvg} alt="Arynox Logo" className="w-[140px] lg:w-[200px] h-auto opacity-90" />
+            <Link to="/signup" className="px-6 py-3 md:px-8 rounded-full bg-[#F9E95C] text-[#FF5458] shadow-xl hover:bg-white hover:scale-[1.05] transition-all font-bold text-[15px] whitespace-nowrap">Sign Up</Link>
           </div>
 
           {/* Nav links — left / center / right */}
