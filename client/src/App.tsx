@@ -111,7 +111,7 @@ function App() {
                       fontFamily: "'Gabarito', sans-serif",
                       fontSize: 'clamp(74px, 15vw, 161px)', // Smoothly transition between mobile (74px) and tablet (161px)
                       fontWeight: 800,
-                      letterSpacing: '-0.05em'
+                      letterSpacing: '-0.02em'
                     }}
                   >
                     arynox.llm
