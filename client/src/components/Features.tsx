@@ -30,7 +30,12 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
       const x = clientX / innerWidth - 0.5;
       const y = clientY / innerHeight - 0.5;
 
-      [video1Ref.current, video2Ref.current, video3Ref.current, video4Ref.current].forEach((vid) => {
+      [
+        video1Ref.current,
+        video2Ref.current,
+        video3Ref.current,
+        video4Ref.current,
+      ].forEach((vid) => {
         if (!vid) return;
         gsap.to(vid, {
           rotateY: x * 30,
@@ -80,74 +85,143 @@ const Features: React.FC<FeaturesProps> = ({ scrollProgress = 0 }) => {
       id="features"
       style={{ perspective: "1200px" }}
     >
-
       {/* ── FEATURE 1 (Seagreen base, always underneath) ── */}
       <div className="absolute inset-0 bg-[#20B2AA] flex items-center justify-center pointer-events-none">
-        <BrandContent title="Content-Isolation" desc="Separates content by department for clarity, security, and efficient access." />
+        <BrandContent
+          title="Content-Isolation"
+          desc="Separates content by department for clarity, security, and efficient access."
+        />
         <div className="absolute inset-0 flex items-center justify-center z-0">
-          <video ref={video1Ref} src={blobGradientVideo} autoPlay muted loop playsInline
-            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto" />
+          <video
+            ref={video1Ref}
+            src={blobGradientVideo}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+          />
         </div>
       </div>
 
       {/* Feature 1 header — slides up + turns red as F2 enters */}
-      <div className="absolute left-0 w-full h-[32px] border-b-2 border-black z-40 flex items-center justify-start px-6"
-        style={{ top: `-${p2 * 100}vh`, backgroundColor: toRed(p2) }}>
-        <span className="text-black font-bold text-[18px] tracking-tight antialiased">Content-Isolation</span>
+      <div
+        className="absolute left-0 w-full h-[32px] border-b-2 border-black z-40 flex items-center justify-start px-6"
+        style={{ top: `-${p2 * 100}vh`, backgroundColor: toRed(p2) }}
+      >
+        <span className="text-black font-bold text-[18px] tracking-tight antialiased">
+          Content-Isolation
+        </span>
       </div>
 
       {/* ── FEATURE 2 (Red, slides over F1) ── z-30 */}
-      <div className="absolute left-0 w-full h-[100vh] bg-[#FF5458] z-30 overflow-hidden pointer-events-none"
-        style={{ top: `${(1 - p2) * 100}vh` }}>
+      <div
+        className="absolute left-0 w-full h-[100vh] bg-[#FF5458] z-30 overflow-hidden pointer-events-none"
+        style={{ top: `${(1 - p2) * 100}vh` }}
+      >
         {/* F2 header — slides out upward + turns seagreen as F3 enters */}
-        <div className="absolute left-0 w-full h-[32px] border-b-2 border-black z-40 flex items-center justify-start px-6 pointer-events-auto"
-          style={{ top: `-${p3 * 100}vh`, backgroundColor: p3 > 0 ? toSeagreen(p3) : toRed(p2) }}>
-          <span className="text-black font-bold text-[18px] tracking-tight antialiased">Confidence-Based Refusal System</span>
+        <div
+          className="absolute left-0 w-full h-[32px] border-b-2 border-black z-40 flex items-center justify-start px-6 pointer-events-auto"
+          style={{
+            top: `-${p3 * 100}vh`,
+            backgroundColor: p3 > 0 ? toSeagreen(p3) : toRed(p2),
+          }}
+        >
+          <span className="text-black font-bold text-[18px] tracking-tight antialiased">
+            Confidence-Based Refusal System
+          </span>
         </div>
-        <BrandContent title="Confidence-Based Refusal System" desc="Refuses uncertain requests based on confidence level, ensuring accurate and reliable responses." />
-        <div className="absolute inset-0 flex items-center justify-center z-0"
-          style={{ transform: `translateY(${-(1 - p2) * 100}vh)` }}>
-          <video ref={video2Ref} src={blobGradientVideo} autoPlay muted loop playsInline
-            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto" />
+        <BrandContent
+          title="Confidence-Based Refusal System"
+          desc="Refuses uncertain requests based on confidence level, ensuring accurate and reliable responses."
+        />
+        <div
+          className="absolute inset-0 flex items-center justify-center z-0"
+          style={{ transform: `translateY(${-(1 - p2) * 100}vh)` }}
+        >
+          <video
+            ref={video2Ref}
+            src={blobGradientVideo}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+          />
         </div>
       </div>
 
       {/* ── FEATURE 3 (Seagreen, slides over F2) ── z-40 */}
       {p3 > 0 && (
-        <div className="absolute left-0 w-full h-[100vh] bg-[#20B2AA] z-40 overflow-hidden pointer-events-none"
-          style={{ top: `${(1 - p3) * 100}vh` }}>
+        <div
+          className="absolute left-0 w-full h-[100vh] bg-[#20B2AA] z-40 overflow-hidden pointer-events-none"
+          style={{ top: `${(1 - p3) * 100}vh` }}
+        >
           {/* F3 header — slides out upward + turns red as F4 enters */}
-          <div className="absolute left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
-            style={{ top: `-${p4 * 100}vh`, backgroundColor: toRed(p4) }}>
-            <span className="text-black font-bold text-[18px] tracking-tight antialiased">Exam-Mode Lock</span>
+          <div
+            className="absolute left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
+            style={{ top: `-${p4 * 100}vh`, backgroundColor: toRed(p4) }}
+          >
+            <span className="text-black font-bold text-[18px] tracking-tight antialiased">
+              Exam-Mode Lock
+            </span>
           </div>
-          <BrandContent title="Exam-Mode Lock" desc="Locks the system into exam mode, restricting access to ensure a focused and secure testing environment." />
-          <div className="absolute inset-0 flex items-center justify-center z-0"
-            style={{ transform: `translateY(${-(1 - p3) * 100}vh)` }}>
-            <video ref={video3Ref} src={blobGradientVideo} autoPlay muted loop playsInline
-              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto" />
+          <BrandContent
+            title="Exam-Mode Lock"
+            desc="Locks the system into exam mode, restricting access to ensure a focused and secure testing environment."
+          />
+          <div
+            className="absolute inset-0 flex items-center justify-center z-0"
+            style={{ transform: `translateY(${-(1 - p3) * 100}vh)` }}
+          >
+            <video
+              ref={video3Ref}
+              src={blobGradientVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+            />
           </div>
         </div>
       )}
 
       {/* ── FEATURE 4 (Red, slides over F3) ── z-50 */}
       {p4 > 0 && (
-        <div className="absolute left-0 w-full h-[100vh] bg-[#FF5458] z-50 overflow-hidden pointer-events-none"
-          style={{ top: `${(1 - p4) * 100}vh` }}>
+        <div
+          className="absolute left-0 w-full h-[100vh] bg-[#FF5458] z-50 overflow-hidden pointer-events-none"
+          style={{ top: `${(1 - p4) * 100}vh` }}
+        >
           {/* F4 header — turns red as it settles */}
-          <div className="absolute top-0 left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
-            style={{ backgroundColor: toRed(p4) }}>
-            <span className="text-black font-bold text-[18px] tracking-tight antialiased">Faculty-Controlled AI Scope</span>
+          <div
+            className="absolute top-0 left-0 w-full h-[32px] border-b-2 border-black z-50 flex items-center justify-start px-6 pointer-events-auto"
+            style={{ backgroundColor: toRed(p4) }}
+          >
+            <span className="text-black font-bold text-[18px] tracking-tight antialiased">
+              Faculty-Controlled AI Scope
+            </span>
           </div>
-          <BrandContent title="Faculty-Controlled AI Scope" desc="Faculty-controlled AI scope lets instructors define and limit AI usage, ensuring guided and appropriate assistance." />
-          <div className="absolute inset-0 flex items-center justify-center z-0"
-            style={{ transform: `translateY(${-(1 - p4) * 100}vh)` }}>
-            <video ref={video4Ref} src={blobGradientVideo} autoPlay muted loop playsInline
-              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto" />
+          <BrandContent
+            title="Faculty-Controlled AI Scope"
+            desc="Faculty-controlled AI scope lets instructors define and limit AI usage, ensuring guided and appropriate assistance."
+          />
+          <div
+            className="absolute inset-0 flex items-center justify-center z-0"
+            style={{ transform: `translateY(${-(1 - p4) * 100}vh)` }}
+          >
+            <video
+              ref={video4Ref}
+              src={blobGradientVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-[80vw] lg:w-[58vw] max-w-[700px] h-auto object-contain will-change-transform pointer-events-auto"
+            />
           </div>
         </div>
       )}
-
     </section>
   );
 };

@@ -4,6 +4,7 @@ import {
   Settings, LogOut, Search, BarChart3, Trash2, Users
 } from 'lucide-react';
 import StudentInsights from './student_insights';
+import logoSvg from '../assets/logo.svg';
 
 // Simulated states for processing pipeline
 type DocState = 'uploading' | 'parsing' | 'chunking' | 'embedding' | 'ready' | 'error';
@@ -298,10 +299,8 @@ export default function TeacherDashboard() {
       <aside className="w-64 flex flex-col justify-between py-8 px-6 border-r border-white/5 bg-[#1e1f20]/50 backdrop-blur-2xl shadow-2xl z-20">
         <div>
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-red-500 flex items-center justify-center font-bold text-xl shadow-[0_0_20px_rgba(124,58,237,0.5)]">
-              A
-            </div>
-            <h1 className="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-amber-400">ARYNOX</h1>
+            <img src={logoSvg} alt="Arynox Logo" className="h-16 w-auto" />
+            <span className="text-[#F9E95C] font-extrabold text-2xl tracking-tight" style={{ fontFamily: "'Gabarito', sans-serif" }}>arynox.llm</span>
           </div>
 
           <nav className="flex flex-col gap-2">

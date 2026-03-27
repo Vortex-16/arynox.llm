@@ -14,7 +14,9 @@ body,
 
 /* Premium UI Utilities */
 .glass-header {
-  @apply backdrop-blur-md bg-[#131314]/80 border-b border-white/5;
+  backdrop-filter: blur(12px);
+  background-color: rgba(19, 19, 20, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
