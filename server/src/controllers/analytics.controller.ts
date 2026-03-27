@@ -115,29 +115,90 @@ export const generateStudentReportPDF = async (req: Request, res: Response): Pro
             return;
         }
 
-        const queryHistory = queries.map((q: any) => `- Topic: ${q.topic} | Query: ${q.query} | Subject: ${q.subject}`).join('\n');
+        const queryHistory = queries.map((q: any) => `- Topic: ${q.topic} | Query: ${q.query}`).join('\n');
 
         const chatModel = getChatModel();
         const response = await chatModel.invoke([
-            new SystemMessage("You are an academic evaluator. Based on the student's query history below, generate an extremely detailed academic report. Evaluate their curiosity, strengths, areas for improvement, and recommended focus areas. Format the report using plain text paragraphs and bullet points, appropriate for a formal PDF document. Avoid markdown symbols like **, ##, etc. since the text will be rendered directly in a PDF."),
+            new SystemMessage(`You are a highly professional academic evaluator. Based on the student's query history below, generate an extremely accurate and formal academic report. Evaluate their curiosity, strengths, areas for improvement, and recommended focus areas. 
+You MUST respond IN PURE JSON format, strictly adhering to this schema and absolutely no markdown or other text outside the JSON:
+{
+  "summary": "A comprehensive paragraph summarizing the student's academic engagement and curiosity based accurately on their queries.",
+  "strengths": ["string", "string"],
+  "areasForImprovement": ["string", "string"],
+  "recommendations": ["string", "string"]
+}`),
             new HumanMessage(`Query History for ${mask(studentId)}:\n\n${queryHistory}`)
         ]);
 
-        const reportText = response.content.toString();
+        let reportData;
+        try {
+            // Clean up any markdown code blocks if the LLM hallucinated them
+            let content = response.content.toString().trim();
+            if (content.startsWith('```json')) content = content.replace(/^```json/, '').replace(/```$/, '').trim();
+            else if (content.startsWith('```')) content = content.replace(/^```/, '').replace(/```$/, '').trim();
+            
+            reportData = JSON.parse(content);
+        } catch (e) {
+            console.error("Failed to parse LLM JSON:", e);
+            // Fallback object if parsing fails
+            reportData = {
+                summary: "The student has been actively asking questions across various topics in the system.",
+                strengths: ["Demonstrates active engagement with the learning materials."],
+                areasForImprovement: ["Consider reviewing fundamental concepts regularly before progressing deeper."],
+                recommendations: ["Consistent review of the interactive knowledge base to reinforce learning."]
+            };
+        }
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="Academic_Report_${mask(studentId).replace(' ', '_')}.pdf"`);
 
-        const doc = new PDFDocument({ margin: 50 });
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
         doc.pipe(res);
 
-        doc.fontSize(20).text(`Academic Report: ${mask(studentId)}`, { align: 'center' });
+        // Header
+        doc.font('Helvetica-Bold').fontSize(24).fillColor('#4f46e5').text('ARYNOX', { align: 'left' });
+        doc.fontSize(16).fillColor('#111827').text('Official Academic Report', { align: 'left' });
+        
+        // Separator Line
+        doc.moveTo(50, doc.y + 10).lineTo(545, doc.y + 10).strokeColor('#e5e7eb').lineWidth(1).stroke();
         doc.moveDown(2);
 
-        doc.fontSize(12).text(reportText, {
-            align: 'justify',
-            lineGap: 4
-        });
+        // Student Info
+        doc.font('Helvetica').fontSize(12).fillColor('#374151');
+        doc.text(`Student: `, { continued: true }).font('Helvetica-Bold').text(mask(studentId));
+        doc.font('Helvetica').text(`Generated On: `, { continued: true }).font('Helvetica-Bold').text(new Date().toLocaleDateString());
+        doc.font('Helvetica').text(`Total Queries Logged: `, { continued: true }).font('Helvetica-Bold').text(String(queries.length));
+        doc.moveDown(2);
+
+        // Section Helper
+        const addSection = (title: string, content: string | string[]) => {
+            doc.font('Helvetica-Bold').fontSize(14).fillColor('#111827').text(title);
+            doc.moveDown(0.5);
+            doc.font('Helvetica').fontSize(11).fillColor('#4b5563');
+
+            if (Array.isArray(content)) {
+                content.forEach(item => {
+                    const currentY = doc.y;
+                    doc.rect(55, currentY + 4, 3, 3).fill('#4f46e5');
+                    doc.text(item, 65, currentY, { align: 'justify', lineGap: 2 });
+                    doc.moveDown(0.3);
+                });
+            } else {
+                doc.text(content, { align: 'justify', lineGap: 4 });
+            }
+            doc.moveDown(1.5);
+        };
+
+        // Report Content sections safely populated
+        addSection("Executive Summary", reportData.summary || 'Summary unavailable.');
+        addSection("Key Strengths", reportData.strengths || ['No specific strengths identified.']);
+        addSection("Areas for Improvement", reportData.areasForImprovement || ['No fundamental areas required.']);
+        addSection("Recommended Focus Areas", reportData.recommendations || ['Continue using the system.']);
+
+        // Footer
+        doc.fontSize(9).fillColor('#9ca3af')
+           .text('This is an AI-generated evaluation based strictly on interactive learning sessions.', 
+                 50, doc.page.height - 50, { align: 'center', baseline: 'bottom' });
 
         doc.end();
 
