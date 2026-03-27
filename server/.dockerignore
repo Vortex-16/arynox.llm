@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+Dockerfile
+.git
+.gitignore
+README_DOCKER.md
+uploads
+vision_test_output.txt
+test_*.js
+*.log

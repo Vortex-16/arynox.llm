@@ -3,6 +3,7 @@ import { Send, CheckSquare, Plus, ArrowLeft, PlayCircle, Loader2, Sparkles, User
 import blobVideo from '../assets/blob_gradient.mov';
 import { Link, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { API_BASE_URL } from '../config';
 
 interface YouTubeVideo {
     videoId: string;
@@ -141,7 +142,7 @@ export default function Notebook() {
 
     const fetchSessions = async () => {
         try {
-            const res = await fetch(`http://localhost:5000/api/chat/session/list/${studentProfile.id}`);
+            const res = await fetch(`${API_BASE_URL}/api/chat/session/list/${studentProfile.id}`);
             if (res.ok) {
                 const data = await res.json();
                 setChatSessions(data);
@@ -152,7 +153,7 @@ export default function Notebook() {
     useEffect(() => {
         const fetchDocuments = async () => {
             try {
-                const res = await fetch(`http://localhost:5000/api/documents?className=${encodeURIComponent(studentProfile.className)}&department=${encodeURIComponent(studentProfile.department)}`);
+                const res = await fetch(`${API_BASE_URL}/api/documents?className=${encodeURIComponent(studentProfile.className)}&department=${encodeURIComponent(studentProfile.department)}`);
                 if (res.ok) {
                     const data = await res.json();
                     const mappedSources = data.map((doc: any, index: number) => ({
@@ -184,7 +185,7 @@ export default function Notebook() {
 
     const loadSession = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/chat/session/load/${id}`);
+            const res = await fetch(`${API_BASE_URL}/api/chat/session/load/${id}`);
             const data = await res.json();
             setSessionId(data.sessionId);
             setMessages(data.messages.map((m: any) => ({
@@ -262,7 +263,7 @@ export default function Notebook() {
         setAudioTranscript(null);
 
         try {
-            const res = await fetch('http://localhost:5000/api/audio/generate', {
+            const res = await fetch(`${API_BASE_URL}/api/audio/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -330,7 +331,7 @@ export default function Notebook() {
         setIsTyping(true);
 
         try {
-            const response = await fetch('http://localhost:5000/api/chat/ask', {
+            const response = await fetch(`${API_BASE_URL}/api/chat/ask`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
