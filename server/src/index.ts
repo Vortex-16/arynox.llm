@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
 import path from 'path';
 import documentRoutes from './routes/document.routes';
 import chatRoutes from './routes/chat.routes';
@@ -14,7 +15,7 @@ import notificationsRoutes from './routes/notifications.routes';
 import userRoutes from './routes/user.routes';
 import doubtRoutes from './routes/doubt.routes';
 
-dotenv.config();
+// dotenv already configured at top
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -41,6 +42,14 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Serve Client Frontend (Production)
 if (process.env.NODE_ENV === 'production') {
     const publicPath = path.join(process.cwd(), 'public');
+    app.get('/public-config.js', (req: Request, res: Response) => {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.send(`window.ARYNOX_CONFIG = ${JSON.stringify({
+            VITE_GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+            VITE_API_BASE_URL: process.env.VITE_API_BASE_URL || ''
+        })};`);
+    });
+
     app.use(express.static(publicPath));
     app.get('*all', (req: Request, res: Response) => {
         res.sendFile(path.join(publicPath, 'index.html'));
