@@ -182,46 +182,68 @@ export default function App() {
 
         const onSubmitClick = async (e) => {
             e.preventDefault();
-            if (emailValid && checkboxEl.checked && nameValid && sprayRepeatCounter > 1) {
-                const email = nameEl.value;
-                const password = emailEl.value;
+            const email = nameEl.value.trim();
+            const password = emailEl.value;
 
-                setIsLoading(true);
-                try {
-                    const res = await fetch('/api/auth/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
+            // Validate: require non-empty email and password (min 6 chars)
+            // Animation state is purely decorative — never block the actual login call
+            if (!email || !password || password.length < 6) {
+                // Show a brief shake animation on the form instead of a blocking alert
+                gsap.to('.form-container', {
+                    x: [-8, 8, -6, 6, 0],
+                    duration: 0.4,
+                    ease: 'none'
+                });
+                return;
+            }
+
+            setIsLoading(true);
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    gsap.to(".main-svg > *", {
+                        duration: .1,
+                        opacity: 0,
+                        stagger: { each: 0.03, from: 'random', ease: 'none' }
                     });
-                    const data = await res.json();
-                    
-                    if (res.ok) {
-                        gsap.to(".main-svg > *", {
-                            duration: .1,
-                            opacity: 0,
-                            stagger: {
-                                each: 0.03,
-                                from: 'random',
-                                ease: 'none',
-                            }
-                        });
-                        gsap.to([".form-container", ".google-btn"], {
-                            delay: .4,
-                            duration: .1,
-                            opacity: 0,
-                            onComplete: () => {
-                                login(data.user, data.token);
-                            }
-                        });
-                    } else {
-                        alert(data.message || 'Login failed');
+                    gsap.to([".form-container", ".google-btn"], {
+                        delay: .4,
+                        duration: .1,
+                        opacity: 0,
+                        onComplete: () => { login(data.user, data.token); }
+                    });
+                } else {
+                    // Show error inline instead of blocking alert()
+                    const errMsg = data.message || 'Login failed. Please check your credentials.';
+                    let errEl = document.getElementById('login-error-msg');
+                    if (!errEl) {
+                        errEl = document.createElement('p');
+                        errEl.id = 'login-error-msg';
+                        errEl.style.cssText = 'color:#ff6b6b;font-size:13px;text-align:center;margin-top:8px;font-family:sans-serif;';
+                        nameEl.closest('.form-container')?.appendChild(errEl);
                     }
-                } catch (err) {
-                    console.error('Login error:', err);
-                    alert('Server error');
-                } finally {
-                    setIsLoading(false);
+                    errEl.textContent = errMsg;
+                    gsap.fromTo(errEl, { opacity: 0, y: -4 }, { opacity: 1, y: 0, duration: 0.3 });
+                    setTimeout(() => { if (errEl) gsap.to(errEl, { opacity: 0, duration: 0.5 }); }, 4000);
                 }
+            } catch (err) {
+                console.error('Login error:', err);
+                let errEl = document.getElementById('login-error-msg');
+                if (!errEl) {
+                    errEl = document.createElement('p');
+                    errEl.id = 'login-error-msg';
+                    errEl.style.cssText = 'color:#ff6b6b;font-size:13px;text-align:center;margin-top:8px;font-family:sans-serif;';
+                    nameEl.closest('.form-container')?.appendChild(errEl);
+                }
+                errEl.textContent = 'Server error — please try again.';
+            } finally {
+                setIsLoading(false);
             }
         };
 

@@ -167,6 +167,62 @@ export const emailLogin = async (req: Request, res: Response): Promise<void> => 
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ADMIN REGISTER — Secret-key-protected bootstrap endpoint
+// Creates the first (or additional) admin account. Requires ADMIN_REGISTER_SECRET
+// to be set in .env. This endpoint should be disabled or protected after initial setup.
+// Usage: POST /api/auth/admin-register
+//        { email, password, name, adminSecret }
+// ─────────────────────────────────────────────────────────────────────────────
+export const adminRegister = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { email, password, name, adminSecret } = req.body;
+
+        // Verify the secret key
+        const ADMIN_SECRET = process.env.ADMIN_REGISTER_SECRET;
+        if (!ADMIN_SECRET) {
+            res.status(503).json({ message: 'Admin registration is not configured. Set ADMIN_REGISTER_SECRET in .env.' });
+            return;
+        }
+        if (!adminSecret || adminSecret !== ADMIN_SECRET) {
+            res.status(403).json({ message: 'Invalid admin secret key.' });
+            return;
+        }
+
+        if (!email || !password || !name) {
+            res.status(400).json({ message: 'Email, password, and name are required.' });
+            return;
+        }
+        if (password.length < 8) {
+            res.status(400).json({ message: 'Admin password must be at least 8 characters.' });
+            return;
+        }
+
+        const existing = await User.findOne({ email });
+        if (existing) {
+            res.status(409).json({ message: 'An account with this email already exists.' });
+            return;
+        }
+
+        const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+        const user = new User({
+            email,
+            name,
+            password: hashed,
+            role: 'admin',
+            onboardingComplete: true, // Admins skip onboarding
+        });
+        await user.save();
+
+        const token = signToken(user);
+        console.log(`[Auth] ✅ New admin account created: ${email}`);
+        res.status(201).json({ message: 'Admin account created successfully.', token, user: safeUser(user) });
+    } catch (error) {
+        console.error('Admin register error:', error);
+        res.status(500).json({ message: 'Internal server error during admin registration' });
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ONBOARDING — saves role + academic profile, marks onboardingComplete = true
 // Protected: requires authenticate middleware (called from auth.routes)
 // ─────────────────────────────────────────────────────────────────────────────

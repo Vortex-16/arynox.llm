@@ -18,20 +18,33 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
             res.status(400).json({ error: 'Title is required in the request body.' });
             return;
         }
+        if (!subject || !department) {
+            res.status(400).json({ error: 'Both "subject" and "department" are required. Documents must be tagged to a subject for correct RAG routing.' });
+            return;
+        }
 
-        // ── Per-subject ChromaDB collection ───────────────────────────────────
-        // If a subject is provided, we route into its dedicated collection.
-        // Falls back to "college_documents" only when subject is absent (legacy uploads).
-        const chromaCollectionName = subject && department
-            ? buildCollectionName(department, subject)
-            : 'college_documents';
+        // Check if this exact title already exists in this department+subject collection
+        const existing = await DocumentMeta.findOne({
+            title: { $regex: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            department,
+            subject
+        });
+        if (existing) {
+            // Clean up temp file
+            if (req.file?.path && fs.existsSync(req.file.path)) {
+                try { fs.unlinkSync(req.file.path); } catch (_) { }
+            }
+            res.status(409).json({ error: `A document titled "${title}" already exists in ${department} / ${subject}. Delete the old one first, or use a different title.` });
+            return;
+        }
 
+        const chromaCollectionName = buildCollectionName(department, subject);
         console.log(`[Upload] Routing "${title}" → collection: "${chromaCollectionName}"`);
 
-        // 1. Extract text from the temporary file (PDF, TXT, or DOCX)
+        // 1. Extract text
         const text = await extractTextFromFile(req.file.path);
 
-        // 2. Chunk and embed with full academic hierarchy metadata
+        // 2. Chunk + embed + store
         const chunkCount = await processDocumentAndStore(
             text,
             title,
@@ -67,11 +80,10 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
         });
     } catch (error: any) {
         console.error("Upload Error (Full Detail):", error);
-        // Cleanup the temp file if parsing failed
         if (req.file?.path && fs.existsSync(req.file.path)) {
             try { fs.unlinkSync(req.file.path); } catch (_) { }
         }
-        res.status(500).json({ error: error?.message || 'Failed to process document.' });
+        next(error);
     }
 };
 

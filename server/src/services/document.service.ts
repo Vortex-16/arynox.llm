@@ -179,44 +179,74 @@ export const processDocumentAndStore = async (
     title: string,
     collectionName: string,
     meta: {
-        className?:  string;  // e.g. "2nd Year"
-        semester?:   string;  // e.g. "Semester 3"
-        department?: string;  // e.g. "CSE"
-        subject?:    string;  // e.g. "Data Structures"
-        chapter?:    string;  // e.g. "Chapter 2 - Trees"
-        section?:    string;  // e.g. "Section 2.3"
-        module?:     string;  // e.g. "Module 1"
+        className?:  string;  
+        semester?:   string;  
+        department?: string;  
+        subject?:    string;  
+        chapter?:    string;  
+        section?:    string;  
+        module?:     string;  
     } = {}
 ) => {
+    // 1000 chars is ~250 words, sweet spot for Llama 3/Arynox context
     const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
 
     try {
-        const chunks = await splitter.splitText(text);
-        console.log(`[DocumentService] ${chunks.length} chunks for "${title}" → collection: "${collectionName}"`);
+        const rawChunks = await splitter.splitText(text);
+        
+        // Deduplicate identical chunks (saves storage + compute)
+        const chunks = Array.from(new Set(rawChunks.filter(c => c.trim().length > 20)));
+        
+        if (chunks.length === 0) {
+            throw new Error(`Document "${title}" yielded no meaningful content (all chunks too small or empty).`);
+        }
+
+        console.log(`[DocumentService] Processing "${title}": ${rawChunks.length} raw → ${chunks.length} deduped chunks.`);
 
         const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40);
         const uploadId = `${safeTitle}_${Date.now()}`;
+
+        // Find all page markers and their indices for faster page lookup
+        const pageMarkers: { page: number, index: number }[] = [];
+        const markerRegex = /--- PAGE (\d+) ---/g;
+        let match;
+        while ((match = markerRegex.exec(text)) !== null) {
+            pageMarkers.push({ page: parseInt(match[1]), index: match.index });
+        }
+
+        const EXPECTED_DIM = 4096;
 
         for (let i = 0; i < chunks.length; i += 50) {
             const batch = chunks.slice(i, i + 50);
             const embeddings: number[][] = [];
 
+            // Generate embeddings in sub-batches
             for (let j = 0; j < batch.length; j += 10) {
                 const sub = batch.slice(j, j + 10);
                 const emb = await generateEmbeddings(sub);
+                
+                // Strict dimension guard
+                emb.forEach((vec, idx) => {
+                    if (vec.length !== EXPECTED_DIM) {
+                        throw new Error(`Embedding dimension mismatch! Got ${vec.length}, expected ${EXPECTED_DIM} for sub-chunk ${idx}.`);
+                    }
+                });
+                
                 embeddings.push(...emb);
             }
 
             const ids = batch.map((_, idx) => `${uploadId}_chunk_${i + idx}`);
 
             const metas = batch.map((chunkText, idx) => {
-                // Determine which page this chunk likely belongs to
+                // Determine which page this chunk belongs to by finding the last indicator before it
                 let assignedPage = 1;
-                const match = text.match(new RegExp(
-                    `--- PAGE (\\d+) ---[\\s\\S]*?${chunkText.substring(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
-                    'i'
-                ));
-                if (match && match[1]) assignedPage = parseInt(match[1]);
+                const chunkIndexInText = text.indexOf(chunkText.substring(0, 50));
+                
+                if (chunkIndexInText !== -1) {
+                    // Find the highest page marker whose index is less than or equal to this chunk
+                    const marker = [...pageMarkers].reverse().find(m => m.index <= chunkIndexInText);
+                    if (marker) assignedPage = marker.page;
+                }
 
                 return {
                     source:     title,
@@ -225,7 +255,7 @@ export const processDocumentAndStore = async (
                     // ── Full academic hierarchy ────────────────────────────────
                     className:  meta.className  || 'Global',
                     semester:   meta.semester   || '',
-                    department: meta.department || 'Global',
+                    department: (meta.department || 'Global').toUpperCase(),
                     subject:    meta.subject    || '',
                     chapter:    meta.chapter    || '',
                     section:    meta.section    || '',
@@ -235,13 +265,16 @@ export const processDocumentAndStore = async (
 
             await addDocumentsToChroma(collectionName, ids, embeddings, batch, metas);
             console.log(`[DocumentService] Stored ${Math.min(i + 50, chunks.length)}/${chunks.length} chunks`);
+            
+            // Minor throttle to ensure ChromaDB ingestion doesn't spike
+            if (i + 50 < chunks.length) await new Promise(r => setTimeout(r, 100));
         }
 
-        console.log(`[DocumentService] ✅ Done: "${title}"`);
+        console.log(`[DocumentService] ✅ Processing complete: "${title}" in collection "${collectionName}"`);
         return chunks.length;
 
     } catch (error: any) {
-        console.error(`[DocumentService] ❌ Error for "${title}":`, error?.message);
+        console.error(`[DocumentService] ❌ Fail for "${title}":`, error?.message);
         throw error;
     }
 };

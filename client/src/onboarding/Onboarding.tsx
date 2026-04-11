@@ -1,23 +1,64 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BrainCircuit, GraduationCap, Users, ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { BrainCircuit, GraduationCap, Users, ArrowRight, CheckCircle2, ChevronLeft, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../config';
+
+interface Program {
+  name: string;
+  type: string;
+  totalSemesters: number;
+}
+
+interface Department {
+  code: string;
+  name: string;
+  programs: Program[];
+}
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const { user, login, token } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loadingDepts, setLoadingDepts] = useState(true);
+
+  // Fetch departments from the admin-seeded database
+  useEffect(() => {
+    const fetchDepts = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/departments/public`);
+        if (res.ok) {
+          const data = await res.json();
+          setDepartments(data);
+        }
+      } catch (err) {
+        console.warn('[Onboarding] Could not fetch departments, falling back to defaults.');
+        // Fallback so onboarding still works without admin setup
+        setDepartments([
+          { code: 'CSE', name: 'Computer Science (CSE)', programs: [{ name: 'Bachelor of Technology', type: 'BTech', totalSemesters: 8 }] },
+          { code: 'IT',  name: 'Information Technology (IT)', programs: [{ name: 'Bachelor of Technology', type: 'BTech', totalSemesters: 8 }] },
+          { code: 'ECE', name: 'Electronics (ECE)', programs: [{ name: 'Bachelor of Technology', type: 'BTech', totalSemesters: 8 }] },
+          { code: 'MECH', name: 'Mechanical (MECH)', programs: [{ name: 'Bachelor of Technology', type: 'BTech', totalSemesters: 8 }] },
+        ]);
+      } finally {
+        setLoadingDepts(false);
+      }
+    };
+    fetchDepts();
+  }, []);
 
   useEffect(() => {
     if (user?.role) {
-      setFormData(prev => ({ ...prev, role: user.role }));
+      setFormData(prev => ({ ...prev, role: user.role as 'student' | 'teacher' }));
     }
   }, [user]);
 
   const [formData, setFormData] = useState({
-    role: 'student',
-    department: 'CSE',
+    role: 'student' as 'student' | 'teacher',
+    department: '',
+    program: '',
     className: '1st Year',
     semester: 'Sem 1',
     subjects: [] as string[],
@@ -25,15 +66,43 @@ export default function Onboarding() {
     classYears: [] as string[],
   });
 
+  // Derive programs from selected department
+  const selectedDept = departments.find(d => d.code === formData.department);
+  const availablePrograms = selectedDept?.programs || [];
+
+  // Derive semester count from selected program
+  const selectedProgram = availablePrograms.find(p => p.type === formData.program);
+  const totalSemesters = selectedProgram?.totalSemesters || 8;
+  const semesterOptions = Array.from({ length: totalSemesters }, (_, i) => `Sem ${i + 1}`);
+
+  // Set defaults when department changes
+  const handleDeptChange = (code: string) => {
+    const dept = departments.find(d => d.code === code);
+    const firstProgram = dept?.programs?.[0]?.type || '';
+    const progObj = dept?.programs?.[0];
+    const sems = progObj?.totalSemesters || 8;
+    setFormData(prev => ({
+      ...prev,
+      department: code,
+      program: firstProgram,
+      semester: 'Sem 1',
+      className: '1st Year',
+    }));
+  };
+
   const handleRoleSelect = (role: 'student' | 'teacher') => {
     setFormData({ ...formData, role });
     setStep(2);
   };
 
   const handleSubmit = async () => {
+    if (!formData.department) {
+      alert('Please select your department.');
+      return;
+    }
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/onboarding', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/onboarding`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +114,11 @@ export default function Onboarding() {
       const data = await response.json();
       if (response.ok) {
         login(data.user, data.token);
-        navigate(data.user.role === 'teacher' ? '/teacher' : '/student');
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate(data.user.role === 'teacher' ? '/teacher' : '/student');
+        }
       } else {
         alert(data.message || 'Onboarding failed');
       }
@@ -115,23 +188,46 @@ export default function Onboarding() {
             </button>
             
             <h1 className="text-3xl font-bold mb-2 tracking-tight">Complete your profile</h1>
-            <p className="text-white/50 mb-8">Tell us which classes and subjects you belong to.</p>
+            <p className="text-white/50 mb-8">Tell us which department and program you belong to.</p>
 
             <div className="space-y-6">
               
+              {/* Department */}
               <div>
                 <label className="block text-xs font-semibold text-white/30 uppercase tracking-widest mb-2">Department</label>
-                <select 
-                  value={formData.department}
-                  onChange={(e) => setFormData({...formData, department: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-amber-500 outline-none transition-colors appearance-none"
-                >
-                  <option value="CSE">Computer Science (CSE)</option>
-                  <option value="IT">Information Technology (IT)</option>
-                  <option value="ECE">Electronics (ECE)</option>
-                  <option value="MECH">Mechanical (MECH)</option>
-                </select>
+                {loadingDepts ? (
+                  <div className="flex items-center gap-2 text-white/30 text-sm py-3">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading departments...
+                  </div>
+                ) : (
+                  <select
+                    value={formData.department}
+                    onChange={(e) => handleDeptChange(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-amber-500 outline-none transition-colors appearance-none"
+                  >
+                    <option value="">— Select Department —</option>
+                    {departments.map(d => (
+                      <option key={d.code} value={d.code}>{d.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
+
+              {/* Program (only show when dept selected and has programs) */}
+              {formData.department && availablePrograms.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-white/30 uppercase tracking-widest mb-2">Program</label>
+                  <select
+                    value={formData.program}
+                    onChange={(e) => setFormData({ ...formData, program: e.target.value, semester: 'Sem 1', className: '1st Year' })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-amber-500 outline-none transition-colors appearance-none"
+                  >
+                    {availablePrograms.map(p => (
+                      <option key={p.type} value={p.type}>{p.name} ({p.type})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {formData.role === 'student' ? (
                 <div className="grid grid-cols-2 gap-4">
@@ -155,7 +251,7 @@ export default function Onboarding() {
                       onChange={(e) => setFormData({...formData, semester: e.target.value})}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-amber-500 outline-none transition-colors"
                     >
-                      {['Sem 1','Sem 2','Sem 3','Sem 4','Sem 5','Sem 6','Sem 7','Sem 8'].map(s => (
+                      {semesterOptions.map(s => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
@@ -169,7 +265,10 @@ export default function Onboarding() {
                         <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                         <div>
                           <h4 className="font-semibold text-amber-500 mb-1">Teaching Profile Ready</h4>
-                          <p className="text-sm text-white/50">Your department is set to <span className="text-white">{formData.department}</span>. You can define specific chapters and semesters for every document you upload.</p>
+                          <p className="text-sm text-white/50">
+                            Your department is set to <span className="text-white">{formData.department || '—'}</span>. 
+                            You can define specific chapters and semesters for every document you upload.
+                          </p>
                         </div>
                       </div>
                    </div>
@@ -178,8 +277,8 @@ export default function Onboarding() {
 
               <button 
                 onClick={handleSubmit}
-                disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-[#111] font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-8 disabled:opacity-50"
+                disabled={loading || !formData.department}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-[#111] font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? <div className="w-5 h-5 border-2 border-[#111]/30 border-t-[#111] animate-spin rounded-full"></div> : "Complete Onboarding"}
                 {!loading && <CheckCircle2 className="w-5 h-5" />}

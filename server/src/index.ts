@@ -14,6 +14,7 @@ import audioRoutes from './routes/audio.routes';
 import notificationsRoutes from './routes/notifications.routes';
 import userRoutes from './routes/user.routes';
 import doubtRoutes from './routes/doubt.routes';
+import adminRoutes from './routes/admin.routes';
 
 // dotenv already configured at top
 
@@ -35,6 +36,7 @@ app.use('/api/audio', audioRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/doubts', doubtRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Static Asset Serving (Allows Teachers to View Uploaded PDFs)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
