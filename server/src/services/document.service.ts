@@ -4,7 +4,7 @@ import axios from 'axios';
 import sharp from 'sharp';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { addDocumentsToChroma } from './vectorstore.service';
-import { generateEmbeddings } from './llm.service';
+import { generateEmbeddings, EXPECTED_EMBEDDING_DIM } from './llm.service';
 import PDFParser from 'pdf2json';
 import mammoth from 'mammoth';
 
@@ -214,7 +214,7 @@ export const processDocumentAndStore = async (
             pageMarkers.push({ page: parseInt(match[1]), index: match.index });
         }
 
-        const EXPECTED_DIM = 4096;
+        const EXPECTED_DIM = EXPECTED_EMBEDDING_DIM;
 
         for (let i = 0; i < chunks.length; i += 50) {
             const batch = chunks.slice(i, i + 50);
