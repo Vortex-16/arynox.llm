@@ -397,12 +397,12 @@ export default function App() {
                     pathD += `A ${holeRadius} ${holeRadius} 1 1 0 ${gear.center.x - holeRadius} ${gear.center.y}`;
                 }
 
-                if (dIdx === 0) {
+                if (dIdx === 0 && gear.center.x != null && gear.center.y != null) {
                     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                     gsap.set(circle, { attr: { cx: gear.center.x, cy: gear.center.y, r: 5, fill: "#E34234" } }); // Vermilion
                     gearsContainer.appendChild(circle);
                     gsap.set(path, { attr: { fill: "#7C3AED", "fill-opacity": .6 } }); // Violet
-                } else if (dIdx === (data.length - 1)) {
+                } else if (dIdx === (data.length - 1) && gear.center.x != null && gear.center.y != null) {
                     gsap.set(path, { attr: { fill: "#7C3AED", "fill-opacity": .6 } }); // Violet
                     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                     gsap.set(circle, { attr: { cx: gear.center.x + handleRadius, cy: gear.center.y, r: 5, fill: "#E34234" } }); // Vermilion
@@ -518,7 +518,10 @@ export default function App() {
                     buttonOriginPoint[0] - (btnWidth - 20) * Math.cos(deg),
                     buttonOriginPoint[1] - (btnWidth - 20) * Math.sin(deg),
                 ];
-                gsap.set(btnHandlerCircle, { attr: { cx: btnEnd[0], cy: btnEnd[1] } });
+                
+                if (!isNaN(btnEnd[0]) && !isNaN(btnEnd[1])) {
+                    gsap.set(btnHandlerCircle, { attr: { cx: btnEnd[0], cy: btnEnd[1] } });
+                }
 
                 const handle = 7;
                 const r = 10;
