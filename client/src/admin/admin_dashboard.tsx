@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
     Users, BookOpen, GraduationCap, Building2, 
-    TrendingUp, AlertTriangle, ChevronRight, BarChart3,
+    AlertTriangle, ChevronRight, BarChart3,
     Activity, Search, LogOut, MessageSquare, Plus, Trash2, Edit2, CheckCircle2, XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -30,12 +30,12 @@ export default function AdminDashboard() {
 
     // Modals
     const [showDeptModal, setShowDeptModal] = useState(false);
-    const [showSubjectModal, setShowSubjectModal] = useState(false);
-    const [editingItem, setEditingItem] = useState<any>(null);
+    // const [showSubjectModal, setShowSubjectModal] = useState(false);
+    // const [editingItem, setEditingItem] = useState<any>(null);
 
     // Form States
     const [deptForm, setDeptForm] = useState({ name: '', code: '', hodName: '', hodEmail: '' });
-    const [subjectForm, setSubjectForm] = useState({ name: '', code: '', departmentCode: '', program: 'BTech', semester: 1 });
+    // const [subjectForm, setSubjectForm] = useState({ name: '', code: '', departmentCode: '', program: 'BTech', semester: 1 });
 
     useEffect(() => {
         if (!token) return;
