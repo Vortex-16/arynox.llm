@@ -1,12 +1,19 @@
 import axios from 'axios';
 
-const CHROMA_BASE = process.env.CHROMA_URL || 'http://localhost:8000';
-const TENANT = 'default_tenant';
-const DATABASE = 'default_database';
+const CHROMA_BASE = process.env.CHROMA_URL || 'https://api.trychroma.com';
+const TENANT = process.env.CHROMA_TENANT || '53429d4f-f9b4-404a-99f3-e6636070158c';
+const DATABASE = process.env.CHROMA_DATABASE || 'ARYNOX';
+const CHROMA_API_KEY = process.env.CHROMA_API_KEY || 'ck-9JTZgGZ1G2TEx2wLSQtiEUTyhqsCL3qLz2pcgm358NYn';
+
 const API_BASE = `${CHROMA_BASE}/api/v2/tenants/${TENANT}/databases/${DATABASE}/collections`;
 
+// Headers for Chroma Cloud Support
+const CHROMA_HEADERS = {
+    'X-Chroma-Token': CHROMA_API_KEY,
+    'Content-Type': 'application/json'
+};
+
 // Model: nvidia/llama-nemotron-embed-1b-v2 -> returns 2048-dim vectors.
-// This MUST match what is used in generateEmbeddings / generateQueryEmbedding.
 const EMBEDDING_DIMENSION = 2048;
 
 // Cache collection IDs so we don't re-fetch on every call
@@ -30,7 +37,7 @@ const withRetry = async <T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): 
 // ── Health check: verify an existing collection has the correct dimension ───────
 const verifyCollectionDimension = async (colId: string): Promise<boolean> => {
     try {
-        const res = await axios.get(`${API_BASE}/${colId}`);
+        const res = await axios.get(`${API_BASE}/${colId}`, { headers: CHROMA_HEADERS });
         const dim = res.data?.metadata?.dimension;
         if (dim && dim !== EMBEDDING_DIMENSION) {
             console.warn(`[ChromaDB] ⚠️ Collection dimension ${dim} ≠ expected ${EMBEDDING_DIMENSION}`);
@@ -47,7 +54,7 @@ const getCollectionId = async (collectionName: string): Promise<string> => {
 
     // Try to GET existing collection by name
     try {
-        const res = await withRetry(() => axios.get(`${API_BASE}/${collectionName}`));
+        const res = await withRetry(() => axios.get(`${API_BASE}/${collectionName}`, { headers: CHROMA_HEADERS }));
         const colId = res.data.id;
 
         // Health check: recreate if dimension is wrong
@@ -55,7 +62,7 @@ const getCollectionId = async (collectionName: string): Promise<string> => {
         if (!healthy) {
             console.warn(`[ChromaDB] Recreating "${collectionName}" due to dimension mismatch…`);
             try {
-                await axios.delete(`${API_BASE}/${colId}`);
+                await axios.delete(`${API_BASE}/${colId}`, { headers: CHROMA_HEADERS });
             } catch (_) { /* may already be gone */ }
             // Fall through to create new
         } else {
@@ -73,7 +80,7 @@ const getCollectionId = async (collectionName: string): Promise<string> => {
             'hnsw:space': 'cosine',
             'dimension': EMBEDDING_DIMENSION
         }
-    }));
+    }, { headers: CHROMA_HEADERS }));
     collectionIdCache[collectionName] = createRes.data.id;
     console.log(`[ChromaDB] ✅ Created collection "${collectionName}" (dim=${EMBEDDING_DIMENSION}) id: ${createRes.data.id}`);
     return createRes.data.id;
@@ -100,7 +107,7 @@ export const addDocumentsToChroma = async (
         embeddings,
         documents,
         metadatas
-    }));
+    }, { headers: CHROMA_HEADERS }));
     console.log(`[ChromaDB] ✅ Stored ${ids.length} chunks in "${collectionName}"`);
 };
 
@@ -119,7 +126,7 @@ export const queryCollection = async (
     if (where) {
         body.where = where;
     }
-    const res = await withRetry(() => axios.post(`${API_BASE}/${colId}/query`, body));
+    const res = await withRetry(() => axios.post(`${API_BASE}/${colId}/query`, body, { headers: CHROMA_HEADERS }));
     return res.data;
 };
 
@@ -128,7 +135,7 @@ export const deleteDocumentFromChroma = async (collectionName: string, sourceTit
         const colId = await getCollectionId(collectionName);
         await withRetry(() => axios.post(`${API_BASE}/${colId}/delete`, {
             where: { 'source': sourceTitle }
-        }));
+        }, { headers: CHROMA_HEADERS }));
         console.log(`[ChromaDB] ✅ Purged vectors for: "${sourceTitle}"`);
     } catch (error: any) {
         console.error(`[ChromaDB] Failed to delete for "${sourceTitle}":`, error?.response?.data || error.message);
@@ -144,7 +151,7 @@ export const getOrCreateCollection = async (_name: string) => null;
  */
 export const listCollections = async (deptPrefix?: string): Promise<string[]> => {
     try {
-        const res = await withRetry(() => axios.get(API_BASE));
+        const res = await withRetry(() => axios.get(API_BASE, { headers: CHROMA_HEADERS }));
         const names: string[] = (res.data as any[]).map((c: any) => c.name as string);
         if (!deptPrefix) return names;
         return names.filter(n => n.startsWith(deptPrefix));
