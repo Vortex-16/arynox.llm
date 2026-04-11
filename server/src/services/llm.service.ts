@@ -64,9 +64,9 @@ export const getSystemPrompt = (options: PromptOptions = { aiStrictness: 'SOCRAT
 const NVIDIA_EMBED_URL = 'https://integrate.api.nvidia.com/v1/embeddings';
 const NVIDIA_EMBED_MODEL = 'nvidia/llama-nemotron-embed-1b-v2';
 
-// The output dimension of nvidia/llama-nemotron-embed-1b-v2 is 4096.
+// The current version of nvidia/llama-nemotron-embed-1b-v2 outputs 2048-dim vectors.
 // This MUST match EMBEDDING_DIMENSION in vectorstore.service.ts.
-export const EXPECTED_EMBEDDING_DIM = 4096;
+export const EXPECTED_EMBEDDING_DIM = 2048;
 
 async function callNvidiaEmbed(texts: string[], inputType: 'passage' | 'query'): Promise<number[][]> {
     const apiKey = process.env.NVIDIA_API_KEY;

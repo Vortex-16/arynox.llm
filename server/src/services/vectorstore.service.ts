@@ -5,10 +5,9 @@ const TENANT = 'default_tenant';
 const DATABASE = 'default_database';
 const API_BASE = `${CHROMA_BASE}/api/v2/tenants/${TENANT}/databases/${DATABASE}/collections`;
 
-// ── Correct embedding dimension for nvidia/llama-nemotron-embed-1b-v2 ──────────
-// This model outputs 4096-dim vectors (confirmed by NVIDIA docs).
+// Model: nvidia/llama-nemotron-embed-1b-v2 -> returns 2048-dim vectors.
 // This MUST match what is used in generateEmbeddings / generateQueryEmbedding.
-const EMBEDDING_DIMENSION = 4096;
+const EMBEDDING_DIMENSION = 2048;
 
 // Cache collection IDs so we don't re-fetch on every call
 const collectionIdCache: Record<string, string> = {};
