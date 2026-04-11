@@ -4,7 +4,8 @@ import {
     getDepartments, getDepartmentsPublic, createDepartment, updateDepartment, deleteDepartment,
     getSubjects, createSubject, updateSubject, assignTeacherToSubject,
     promoteStudent, bulkPromoteStudents,
-    getAdminStats, getAllFaculty, getAllStudents, deleteUser
+    getAdminStats, getAllFaculty, getAllStudents, deleteUser,
+    getSystemSettings, updateSystemSettings
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -39,5 +40,9 @@ router.delete('/users/:id', ...adminOnly, deleteUser);
 
 // University stats
 router.get('/stats', ...adminOnly, getAdminStats);
+
+// System Configuration
+router.get('/settings', ...adminOnly, getSystemSettings);
+router.put('/settings', ...adminOnly, updateSystemSettings);
 
 export default router;

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { 
     Users, BookOpen, GraduationCap, Building2, 
     AlertTriangle, ChevronRight, BarChart3,
-    Activity, Search, LogOut, MessageSquare, Plus, Trash2, Edit2, CheckCircle2, XCircle
+    Activity, Search, LogOut, MessageSquare, Plus, Trash2, Edit2, CheckCircle2, XCircle, Settings2, Sparkles, ShieldAlert
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 
-type Tab = 'overview' | 'faculty' | 'departments' | 'subjects' | 'students';
+type Tab = 'overview' | 'faculty' | 'departments' | 'subjects' | 'students' | 'settings';
 
 export default function AdminDashboard() {
     const { user, token, logout } = useAuth();
@@ -49,6 +49,7 @@ export default function AdminDashboard() {
             case 'students': fetchStudents(); break;
             case 'departments': fetchDepartments(); break;
             case 'subjects': fetchSubjects(); break;
+            case 'settings': fetchSettings(); break;
         }
     };
 
@@ -113,6 +114,33 @@ export default function AdminDashboard() {
         finally { setIsLoading(false); }
     };
 
+    const [sysSettings, setSysSettings] = useState<any>(null);
+    const fetchSettings = async () => {
+        try {
+            setIsLoading(true);
+            const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) setSysSettings(await res.json());
+        } catch (err) { console.error(err); }
+        finally { setIsLoading(false); }
+    };
+
+    const handleUpdateSettings = async (updates: any) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(updates)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setSysSettings(data.settings);
+                alert('Intelligence settings updated.');
+            }
+        } catch (err) { console.error(err); }
+    };
+
     const handleCreateDept = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/admin/departments`, {
@@ -174,6 +202,7 @@ export default function AdminDashboard() {
                     <SidebarItem icon={BookOpen} label="Subject Registry" active={activeTab === 'subjects'} onClick={() => setActiveTab('subjects')} />
                     <SidebarItem icon={GraduationCap} label="Faculty Registry" active={activeTab === 'faculty'} onClick={() => setActiveTab('faculty')} />
                     <SidebarItem icon={Users} label="Student Bodies" active={activeTab === 'students'} onClick={() => setActiveTab('students')} />
+                    <SidebarItem icon={Settings2} label="System Intelligence" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
                 </nav>
 
                 <div className="p-6">
@@ -228,6 +257,7 @@ export default function AdminDashboard() {
                     {activeTab === 'subjects' && <SubjectsTab subjects={subjects} isLoading={isLoading} />}
                     {activeTab === 'faculty' && <UserListTab users={faculty} role="teacher" onDelete={(id) => handleDeleteUser(id, 'teacher')} isLoading={isLoading} />}
                     {activeTab === 'students' && <UserListTab users={students} role="student" onDelete={(id) => handleDeleteUser(id, 'student')} isLoading={isLoading} />}
+                    {activeTab === 'settings' && <SettingsTab settings={sysSettings} onSave={handleUpdateSettings} isLoading={isLoading} />}
                 </div>
             </main>
 
@@ -633,6 +663,87 @@ function Loader() {
             <Activity className="w-12 h-12 text-amber-500 animate-spin opacity-20" />
             <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+            </div>
+        </div>
+    );
+}
+
+function SettingsTab({ settings, onSave, isLoading }: any) {
+    if (isLoading && !settings) return <div className="flex justify-center p-20"><Loader /></div>;
+    return (
+        <div className="space-y-10 animate-in zoom-in-95 duration-500 max-w-4xl">
+            <div className="bg-[#111] p-10 rounded-[40px] border border-white/5 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Sparkles className="w-16 h-16 text-amber-500" />
+                </div>
+                <h2 className="text-3xl font-black text-white italic tracking-tight uppercase mb-2">Neural Coordination</h2>
+                <p className="text-xs text-white/30 font-bold uppercase tracking-widest">Fine-tune the Socratic teaching engine</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* AI Strictness */}
+                <div className="p-8 rounded-[40px] bg-[#0b0b0b] border border-white/5 space-y-6">
+                    <div className="flex items-center gap-3">
+                        <MessageSquare className="w-5 h-5 text-amber-500" />
+                        <h3 className="text-sm font-black uppercase tracking-widest text-white">AI strictness</h3>
+                    </div>
+                    <div className="space-y-3">
+                        {[
+                            { id: 'SOCRATIC', label: 'Strictly Socratic', desc: 'Never gives direct answers. Always asks guiding questions.' },
+                            { id: 'DIRECT', label: 'Instructional (Direct)', desc: 'Provides formulas and definitions directly, then guides.' },
+                            { id: 'HINTS_ONLY', label: 'Minimalist Hints', desc: 'Provides the smallest possible nudge to the student.' }
+                        ].map(mode => (
+                            <button 
+                                key={mode.id}
+                                onClick={() => onSave({ aiStrictness: mode.id })}
+                                className={`w-full text-left p-4 rounded-2xl border transition-all ${settings?.aiStrictness === mode.id ? 'bg-amber-500/10 border-amber-500 text-amber-500' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'}`}
+                            >
+                                <p className="text-xs font-black uppercase tracking-tight">{mode.label}</p>
+                                <p className="text-[10px] font-medium mt-1 opacity-60">{mode.desc}</p>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Exam Mode Toggle */}
+                <div className="p-8 rounded-[40px] bg-[#0b0b0b] border border-white/5 flex flex-col justify-between">
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                            <ShieldAlert className="w-5 h-5 text-red-500" />
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white">Controlled Environment</h3>
+                        </div>
+                        <p className="text-xs text-white/30 font-medium leading-relaxed">
+                            When active, students cannot access external knowledge or conversational features. AI will only provide hints from uploaded course materials.
+                        </p>
+                    </div>
+                    <button 
+                        onClick={() => onSave({ isExamMode: !settings?.isExamMode })}
+                        className={`mt-8 w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl ${settings?.isExamMode ? 'bg-red-500 text-black shadow-red-500/20' : 'bg-white/5 border border-white/10 text-white/40 hover:text-white'}`}
+                    >
+                        {settings?.isExamMode ? 'Disable Exam Mode' : 'Enable Exam Mode'}
+                    </button>
+                </div>
+
+                {/* Confidence Threshold */}
+                <div className="md:col-span-2 p-8 rounded-[40px] bg-[#0b0b0b] border border-white/5">
+                    <div className="flex justify-between items-center mb-10">
+                        <div className="flex items-center gap-3">
+                            <Activity className="w-5 h-5 text-blue-400" />
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white">RAG Confidence Threshold</h3>
+                        </div>
+                        <span className="text-xl font-black text-blue-400 italic">{(settings?.confidenceThreshold * 100).toFixed(0)}%</span>
+                    </div>
+                    <input 
+                        type="range" min="0.1" max="0.9" step="0.05"
+                        value={settings?.confidenceThreshold || 0.45}
+                        onChange={(e) => onSave({ confidenceThreshold: parseFloat(e.target.value) })}
+                        className="w-full h-2 bg-white/5 rounded-lg appearance-none cursor-pointer accent-blue-400"
+                    />
+                    <div className="flex justify-between mt-4 text-[9px] font-black uppercase tracking-widest text-white/20">
+                        <span>Lenient (High Recall)</span>
+                        <span>Strict (High Precision)</span>
+                    </div>
+                </div>
             </div>
         </div>
     );

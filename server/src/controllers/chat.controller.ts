@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { queryCollection, listCollections } from '../services/vectorstore.service';
-import { generateQueryEmbedding, getChatModel, getFallbackChatModel, SOCRATIC_SYSTEM_PROMPT, extractTopic } from '../services/llm.service';
+import { generateQueryEmbedding, getChatModel, getFallbackChatModel, getSystemPrompt, extractTopic } from '../services/llm.service';
 import { buildCollectionName } from '../services/document.service';
 import { searchBestYouTubeVideo } from '../services/youtube.service';
 import QueryLog from '../models/QueryLog';
@@ -254,24 +254,26 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
         }
 
         // ─── 4. SOCRATIC RAG PROMPT ASSEMBLY ──────────────────────────────────
-        let systemPromptText: string = SOCRATIC_SYSTEM_PROMPT;
         const youtubeVideo = await videoSearchPromise;
+        const promptOptions = {
+            aiStrictness: aiStrictness as any,
+            isExamMode,
+            hasContext
+        };
+        
+        let systemPromptText: string = getSystemPrompt(promptOptions);
 
         if (hasContext) {
             systemPromptText += `\n\n--- CONTEXT BLOCKS START ---\n${contextBlock}\n--- CONTEXT BLOCKS END ---`;
             const verificationContext = isFollowUp
                 ? `This is a follow-up in an ongoing conversation. The student's recent messages were: "${recentHistory.slice(-300)}". Their latest message is: "${query}".`
                 : `The student asked: "${query}".`;
-            systemPromptText += `\n\n[MANDATORY PRE-RESPONSE CHECK] ${verificationContext} Before writing your response, verify: do the context blocks above address the topic being discussed? If the context is completely unrelated to this conversation, apply RULE 3 and refuse. Otherwise, continue the conversation naturally.`;
-
-            if (isExamMode || aiStrictness === 'HINTS_ONLY') {
-                systemPromptText += `\n\n[EXAM MODE ACTIVE] Additional constraint on top of all existing rules:\n- You may NOT provide any explanations or direct answers — only Socratic guiding questions.\n- Your guiding questions must stay within the topic area covered by the context blocks.\n- Do NOT state any specific facts, formulas, or numerical values from pre-trained knowledge — only use what is in the context.\n- If you cannot form a meaningful question from the context, refuse with the standard refusal phrase.\n- Reply to concept overview requests with: "I'm in Exam Mode. I can only provide hints based on content found in your uploaded course materials."`;
-            }
+            systemPromptText += `\n\n[MANDATORY PRE-RESPONSE CHECK] ${verificationContext} Before writing your response, verify: do the context blocks above address the topic being discussed? If the context is completely unrelated to this conversation, ignore it and use your academic core. Otherwise, continue the conversation naturally.`;
         } else if (!youtubeVideo) {
             const refusalReason = !isConfident && searchResults?.documents?.[0]?.length > 0
                 ? "the available material is not specific enough to answer your question confidently"
                 : "no matching content was found in the uploaded course materials";
-            systemPromptText += `\n\n[HARD REFUSAL — DO NOT OVERRIDE] Because ${refusalReason}, you MUST refuse to answer. Do NOT use your pre-trained knowledge under any circumstances. Reply ONLY: "I couldn't find information about this in your uploaded course materials, so I've forwarded your query to the faculty for review." — nothing else.`;
+            systemPromptText += `\n\n[INSTRUCTION] Because ${refusalReason}, you should follow the REFUSAL GUIDELINE in the system prompt. Do not invent facts beyond academic common sense.`;
         }
 
         if (youtubeVideo) {
@@ -312,7 +314,11 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
         let forwarded = false;
         
         const answerLower = rawAnswer.toLowerCase();
-        if (answerLower.includes("couldn't find information") || answerLower.includes("don't know")) {
+        if (
+            answerLower.includes("couldn't find information") || 
+            answerLower.includes("couldn't find a direct reference") ||
+            answerLower.includes("don't know")
+        ) {
             statusToLog = 'UNANSWERED_FORWARDED';
             forwarded = true;
         }

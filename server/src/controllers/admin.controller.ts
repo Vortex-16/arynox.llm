@@ -331,3 +331,47 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
         res.status(500).json({ error: 'Failed to delete user.' });
     }
 };
+
+// ─── SYSTEM SETTINGS ───────────────────────────────────────────────────────────
+
+export const getSystemSettings = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { dept } = req.query;
+        const department = dept ? String(dept).toUpperCase() : 'GENERAL';
+        let settings = await require('../models/SystemSetting').default.findOne({ department });
+        
+        if (!settings) {
+            // Create default settings if none exist
+            settings = new (require('../models/SystemSetting').default)({ department });
+            await settings.save();
+        }
+        
+        res.status(200).json(settings);
+    } catch (err) {
+        console.error('[Admin] getSystemSettings error:', err);
+        res.status(500).json({ error: 'Failed to fetch settings.' });
+    }
+};
+
+export const updateSystemSettings = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { dept } = req.query;
+        const department = dept ? String(dept).toUpperCase() : 'GENERAL';
+        const { isExamMode, aiStrictness, confidenceThreshold } = req.body;
+        
+        let settings = await require('../models/SystemSetting').default.findOne({ department });
+        if (!settings) {
+            settings = new (require('../models/SystemSetting').default)({ department });
+        }
+        
+        if (isExamMode !== undefined) settings.isExamMode = isExamMode;
+        if (aiStrictness !== undefined) settings.aiStrictness = aiStrictness;
+        if (confidenceThreshold !== undefined) settings.confidenceThreshold = confidenceThreshold;
+        
+        await settings.save();
+        res.status(200).json({ message: 'Settings updated successfully.', settings });
+    } catch (err) {
+        console.error('[Admin] updateSystemSettings error:', err);
+        res.status(500).json({ error: 'Failed to update settings.' });
+    }
+};

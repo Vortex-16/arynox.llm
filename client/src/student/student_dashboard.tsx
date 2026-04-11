@@ -186,22 +186,41 @@ export default function StudentAnalyticsDashboard() {
                                                 <h4 className="text-xl font-bold text-white/90 mb-2 group-hover:text-white transition-colors capitalize">{module}</h4>
                                                 <p className="text-sm text-white/40 mb-6 line-clamp-2">Master this module with interactive Socratic tutoring and voice-enabled learning.</p>
                                                 
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex -space-x-3">
-                                                        {(docs as any[]).slice(0, 3).map((_: any, i: number) => (
-                                                            <div key={i} className="w-8 h-8 rounded-full border-2 border-[#111] bg-[#1a1b1c] flex items-center justify-center">
-                                                                <FileText className="w-3 h-3 text-white/30" />
-                                                            </div>
-                                                        ))}
-                                                        {(docs as any[]).length > 3 && (
-                                                            <div className="w-8 h-8 rounded-full border-2 border-[#111] bg-[#1a1b1c] flex items-center justify-center text-[10px] font-bold text-white/40">
-                                                                +{(docs as any[]).length - 3}
-                                                            </div>
-                                                        )}
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex -space-x-3">
+                                                            {(docs as any[]).slice(0, 3).map((_: any, i: number) => (
+                                                                <div key={i} className="w-8 h-8 rounded-full border-2 border-[#111] bg-[#1a1b1c] flex items-center justify-center">
+                                                                    <FileText className="w-3 h-3 text-white/30" />
+                                                                </div>
+                                                            ))}
+                                                            {(docs as any[]).length > 3 && (
+                                                                <div className="w-8 h-8 rounded-full border-2 border-[#111] bg-[#1a1b1c] flex items-center justify-center text-[10px] font-bold text-white/40">
+                                                                    +{(docs as any[]).length - 3}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-xs font-medium text-white/30 group-hover:text-amber-500/60 transition-colors">
+                                                            {(docs as any[]).length} Unit{(docs as any[]).length !== 1 ? 's' : ''} • Ready
+                                                        </span>
                                                     </div>
-                                                    <span className="text-xs font-medium text-white/30 group-hover:text-amber-500/60 transition-colors">
-                                                        {(docs as any[]).length} Unit{(docs as any[]).length !== 1 ? 's' : ''} • Ready
-                                                    </span>
+                                                    
+                                                    {/* Unit Quick Links */}
+                                                    <div className="flex flex-wrap gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                        {(docs as any[]).slice(0, 5).map((doc: any) => (
+                                                            <a 
+                                                                key={doc._id}
+                                                                href={doc.fileUrl ? `${API_BASE_URL}${doc.fileUrl}` : '#'}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold text-white/40 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-500 transition-all flex items-center gap-1.5"
+                                                            >
+                                                                <FileText className="w-3 h-3" />
+                                                                {doc.title.length > 20 ? doc.title.substring(0, 17) + '...' : doc.title}
+                                                            </a>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

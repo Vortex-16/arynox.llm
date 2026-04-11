@@ -527,12 +527,12 @@ export default function Notebook() {
                                     {src.name}
                                 </h3>
                             </div>
-                            {src.fileUrl && (
+                             {src.fileUrl && (
                                 <a 
                                     href={`${API_BASE_URL}${src.fileUrl}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-2 opacity-0 group-hover:opacity-100 hover:bg-white/5 rounded-lg transition-all"
+                                    className="p-2 hover:bg-white/10 rounded-lg transition-all"
                                     onClick={(e) => e.stopPropagation()}
                                     title="View PDF"
                                 >
