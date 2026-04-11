@@ -79,7 +79,6 @@ export default function Onboarding() {
   const handleDeptChange = (code: string) => {
     const dept = departments.find(d => d.code === code);
     const firstProgram = dept?.programs?.[0]?.type || '';
-    const progObj = dept?.programs?.[0];
     setFormData(prev => ({
       ...prev,
       department: code,
