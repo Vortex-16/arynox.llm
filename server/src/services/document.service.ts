@@ -62,49 +62,62 @@ const extractTextFromDocx = async (filePath: string): Promise<string> => {
 };
 
 // ─── Nvidia Nemotron OCR (fast ~2s/page, for scanned/image PDFs) ──────────────
+const pdfParse = require('pdf-parse');
+
 const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise<string> => {
     const OCR_URL = 'https://ai.api.nvidia.com/v1/cv/nvidia/nemotron-ocr-v1';
 
-    // ── Memory Safe Optimization ───────────────────────────────────────────
-    // We render pages at a LOWER scale (0.4x) initially to calculate length.
-    // Sharp then processes each buffer and discards it immediately to prevent
-    // heap buildup.
-    const pages = await pdfToPng(filePath, { viewportScale: 0.4, disableFontFace: true });
-    console.log(`[OCR] Processing ${pages.length} pages sequentially to save RAM...`);
+    // ── Ultra Memory Safe Logic ──────────────────────────────────────────
+    // 1. Get total page count WITHOUT rendering (very low memory)
+    const dataBuffer = fs.readFileSync(filePath);
+    const pdfData = await pdfParse(dataBuffer);
+    const numPages = pdfData.numpages || 1;
+    console.log(`[OCR] Target: ${numPages} pages. Starting page-by-page render to avoid OOM.`);
 
     let fullText = '';
 
-    for (let i = 0; i < pages.length; i++) {
-        const content = pages[i].content;
-        if (!content) continue;
-
+    // 2. Process each page INDIVIDUALLY
+    for (let i = 1; i <= numPages; i++) {
+        console.log(`[OCR] Processing Page ${i}/${numPages}...`);
+        
         try {
-            // Compress heavily: PNG -> JPEG (Quality 40)
-            // Smaller payloads (under 100KB) process faster and use less memory
-            const jpegBuf = await sharp(content).jpeg({ quality: 40 }).toBuffer();
-            const b64 = jpegBuf.toString('base64');
+            // Render ONLY this specific page. Using 'any' to bypass restrictive type defs
+            // as some versions of the lib support the 'pages' or 'pageNumbers' prop at runtime.
+            const options: any = { 
+                pages: [i], 
+                viewportScale: 0.4, 
+                disableFontFace: true 
+            };
+            const pages = await pdfToPng(filePath, options);
 
-            const res = await axios.post(OCR_URL, {
-                input: [{ type: 'image_url', url: `data:image/jpeg;base64,${b64}` }]
-            }, {
-                headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
-                timeout: 25000 // Extended timeout for large pages
-            });
+            if (pages.length > 0 && pages[0].content) {
+                const content = pages[0].content;
 
-            const detections: any[] = res.data?.data?.[0]?.text_detections || [];
-            const pageText = detections.map((d: any) => d.text_prediction?.text || '').join(' ').trim();
-            fullText += `\n--- PAGE ${i + 1} ---\n${pageText}\n`;
-            
-            // Clean up: Request GC tip for Node
-            (pages[i] as any).content = null; 
+                // Compress PNG -> JPEG (Small payload = stable heap)
+                const jpegBuf = await sharp(content).jpeg({ quality: 35 }).toBuffer();
+                const b64 = jpegBuf.toString('base64');
 
+                const res = await axios.post(OCR_URL, {
+                    input: [{ type: 'image_url', url: `data:image/jpeg;base64,${b64}` }]
+                }, {
+                    headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
+                    timeout: 25000
+                });
+
+                const detections: any[] = res.data?.data?.[0]?.text_detections || [];
+                const pageText = detections.map((d: any) => d.text_prediction?.text || '').join(' ').trim();
+                fullText += `\n--- PAGE ${i} ---\n${pageText}\n`;
+                
+                // CRITICAL: Explicitly nullify to help heap cleanup
+                (pages[0] as any).content = null;
+            }
         } catch (err: any) {
-            console.error(`[OCR] Page ${i + 1} failed:`, err.message);
-            fullText += `\n--- PAGE ${i + 1} ---\n[Scan failed]\n`;
+            console.error(`[OCR] ❌ Page ${i} failed:`, err.message);
+            fullText += `\n--- PAGE ${i} ---\n[Scan failed]\n`;
         }
 
-        // Delay to allow Render's Event Loop to breathe
-        if (i < pages.length - 1) await new Promise(r => setTimeout(r, 800));
+        // Delay to allow GC to sweep
+        await new Promise(r => setTimeout(r, 1200));
     }
 
     return fullText;
