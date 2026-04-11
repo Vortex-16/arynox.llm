@@ -97,6 +97,7 @@ input, textarea {
 }
 
 .grain-overlay {
+  display: none;
   position: absolute;
   top: -150%;
   left: -150%;

@@ -99,7 +99,7 @@ function App() {
                 <div className="absolute z-50 pointer-events-none flex justify-center -translate-x-1/2 left-[50%] top-[55%] w-[140px] md:left-[50%] md:top-[66%] md:w-[200px] lg:left-[50%] lg:top-[74%] lg:w-[260px]">
                   <img src={logoSvg} alt="Logo" className="w-full h-auto opacity-90" />
                 </div>
-                <div className="grain-overlay hidden lg:block" />
+                {/* Grain effect removed for visibility */}
               </main>
 
               <div className="w-[100vw] h-full shrink-0">
