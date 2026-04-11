@@ -68,11 +68,22 @@ const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise
     const OCR_URL = 'https://ai.api.nvidia.com/v1/cv/nvidia/nemotron-ocr-v1';
 
     // ── Ultra Memory Safe Logic ──────────────────────────────────────────
-    // 1. Get total page count WITHOUT rendering (very low memory)
-    const dataBuffer = fs.readFileSync(filePath);
-    const pdfData = await pdfParse(dataBuffer);
-    const numPages = pdfData.numpages || 1;
-    console.log(`[OCR] Target: ${numPages} pages. Starting page-by-page render to avoid OOM.`);
+    // 1. Get total page count WITHOUT rendering (using a very small buffer read)
+    // We only need the first few hundred KB to get metadata nPages usually, 
+    // but pdf-parse needs the whole thing. We'll read it once and nullify.
+    let numPages = 1;
+    try {
+        const dataBuffer = fs.readFileSync(filePath);
+        const pdfParser = typeof pdfParse === 'function' ? pdfParse : pdfParse.default;
+        const pdfData = await pdfParser(dataBuffer);
+        numPages = pdfData.numpages || 1;
+        // Clean up buffer immediately
+        (dataBuffer as any) = null;
+    } catch (e) {
+        console.warn("[OCR] Metadata extraction failed, defaulting to 1 page.", e);
+    }
+
+    console.log(`[OCR] Target: ${numPages} pages. Processing sequentially...`);
 
     let fullText = '';
 
@@ -81,8 +92,7 @@ const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise
         console.log(`[OCR] Processing Page ${i}/${numPages}...`);
         
         try {
-            // Render ONLY this specific page. Using 'any' to bypass restrictive type defs
-            // as some versions of the lib support the 'pages' or 'pageNumbers' prop at runtime.
+            // pdfToPng handles its own file reading page-by-page from disk!
             const options: any = { 
                 pages: [i], 
                 viewportScale: 0.4, 
@@ -108,16 +118,17 @@ const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise
                 const pageText = detections.map((d: any) => d.text_prediction?.text || '').join(' ').trim();
                 fullText += `\n--- PAGE ${i} ---\n${pageText}\n`;
                 
-                // CRITICAL: Explicitly nullify to help heap cleanup
+                // CRITICAL Cleanup
                 (pages[0] as any).content = null;
+                (jpegBuf as any) = null;
             }
         } catch (err: any) {
             console.error(`[OCR] ❌ Page ${i} failed:`, err.message);
             fullText += `\n--- PAGE ${i} ---\n[Scan failed]\n`;
         }
 
-        // Delay to allow GC to sweep
-        await new Promise(r => setTimeout(r, 1200));
+        // Cool-down for GC
+        await new Promise(r => setTimeout(r, 1500));
     }
 
     return fullText;
