@@ -63,6 +63,7 @@ export default function TeacherDashboard() {
 
   const [isExamMode, setIsExamMode] = useState(false);
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.45);
+  const [aiStrictness, setAiStrictness] = useState<'SOCRATIC' | 'DIRECT' | 'HINTS_ONLY'>('SOCRATIC');
 
   // Student Management State
   const [students, setStudents] = useState<any[]>([]);
@@ -243,6 +244,7 @@ export default function TeacherDashboard() {
         const data = await res.json();
         setIsExamMode(data.isExamMode);
         setConfidenceThreshold(data.confidenceThreshold);
+        setAiStrictness(data.aiStrictness || 'SOCRATIC');
       }
     } catch (err) {}
   };
@@ -723,6 +725,27 @@ export default function TeacherDashboard() {
                     <button onClick={() => { setIsExamMode(!isExamMode); updateBackendSettings({isExamMode: !isExamMode}); }} className={`w-12 h-6 rounded-full relative transition-all ${isExamMode ? 'bg-amber-500' : 'bg-white/10'}`}>
                       <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isExamMode ? 'left-7' : 'left-1'}`} />
                     </button>
+                  </div>
+
+                  <div className="flex justify-between items-center p-4 bg-white/5 rounded-2xl">
+                    <div>
+                      <h4 className="font-semibold">Default Tutoring Style</h4>
+                      <p className="text-sm text-white/40">Set the default mode for student sessions (Discovery vs Direct).</p>
+                    </div>
+                    <div className="flex bg-black/20 p-1 rounded-xl border border-white/5">
+                        <button 
+                            onClick={() => { setAiStrictness('SOCRATIC'); updateBackendSettings({aiStrictness: 'SOCRATIC'}); }}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${aiStrictness === 'SOCRATIC' ? 'bg-[#a8c7fa] text-[#041e49]' : 'text-white/40'}`}
+                        >
+                            Discovery
+                        </button>
+                        <button 
+                            onClick={() => { setAiStrictness('DIRECT'); updateBackendSettings({aiStrictness: 'DIRECT'}); }}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${aiStrictness === 'DIRECT' ? 'bg-amber-500 text-black' : 'text-white/40'}`}
+                        >
+                            Direct
+                        </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4 p-4 bg-white/5 rounded-2xl">

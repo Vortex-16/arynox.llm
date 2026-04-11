@@ -85,7 +85,7 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
             return;
         }
 
-        const { query, sessionId, subject, chapter, section, sourceIds } = req.body;
+        const { query, sessionId, subject, chapter, section, sourceIds, aiStrictnessOverride } = req.body;
         
         // Verified identity props — ignore client-sent overrides for security
         const department = fullUser.department || 'General';
@@ -171,7 +171,13 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
         // Fetch Faculty Settings
         const settings = await SystemSetting.findOne({ department: department || 'General' });
         const isExamMode = settings?.isExamMode || false;
-        const aiStrictness = settings?.aiStrictness || 'SOCRATIC';
+        
+        // Use user's preference if provided, otherwise fallback to department default
+        let aiStrictness = settings?.aiStrictness || 'SOCRATIC';
+        if (aiStrictnessOverride && !isExamMode) {
+            aiStrictness = aiStrictnessOverride;
+        }
+        
         const confidenceThreshold = settings?.confidenceThreshold || 0.45;
 
         // ─── 2. COLLECTION RESOLUTION + VECTOR RETRIEVAL ──────────────────────

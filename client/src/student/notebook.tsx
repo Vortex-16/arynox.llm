@@ -140,6 +140,7 @@ export default function Notebook() {
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [tutorMode, setTutorMode] = useState<'SOCRATIC' | 'DIRECT'>('SOCRATIC');
 
     const [sources, setSources] = useState<SourceDocument[]>([]);
     const [isLoadingSources, setIsLoadingSources] = useState(true);
@@ -440,7 +441,8 @@ export default function Notebook() {
                     sessionId: sessionId,
                     sourceIds: sources.filter(s => s.selected).map(s => s.id),
                     subject: targetSubject,
-                    module: targetModule
+                    module: targetModule,
+                    aiStrictnessOverride: tutorMode
                 })
             });
 
@@ -613,7 +615,31 @@ export default function Notebook() {
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         arynox.llm Guide
                     </h2>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
+                        {/* Tutor Mode Toggle */}
+                        <div className="flex bg-[#1e1f20] p-1 rounded-full border border-white/5 shadow-inner">
+                            <button 
+                                onClick={() => setTutorMode('SOCRATIC')}
+                                className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    tutorMode === 'SOCRATIC' 
+                                        ? 'bg-[#a8c7fa] text-[#041e49] shadow-lg scale-[1.05]' 
+                                        : 'text-white/40 hover:text-white/60'
+                                }`}
+                            >
+                                Discovery
+                            </button>
+                            <button 
+                                onClick={() => setTutorMode('DIRECT')}
+                                className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    tutorMode === 'DIRECT' 
+                                        ? 'bg-amber-500 text-black shadow-lg scale-[1.05]' 
+                                        : 'text-white/40 hover:text-white/60'
+                                }`}
+                            >
+                                Direct
+                            </button>
+                        </div>
+
                         <button className="text-sm font-medium text-[#c4c7c5] hover:text-[#e3e3e3] px-4 py-2 rounded-full hover:bg-[#282a2c] transition-colors flex items-center gap-2">
                             <Share2 className="w-4 h-4" />
                             Share
