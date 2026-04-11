@@ -65,9 +65,12 @@ const extractTextFromDocx = async (filePath: string): Promise<string> => {
 const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise<string> => {
     const OCR_URL = 'https://ai.api.nvidia.com/v1/cv/nvidia/nemotron-ocr-v1';
 
-    // Render at 0.5x for readable text, then compress PNG→JPEG to stay under 180KB b64 limit
-    const pages = await pdfToPng(filePath, { viewportScale: 0.5, disableFontFace: true });
-    console.log(`[OCR] Rendered ${pages.length} pages at 0.5x. Compressing & scanning...`);
+    // ── Memory Safe Optimization ───────────────────────────────────────────
+    // We render pages at a LOWER scale (0.4x) initially to calculate length.
+    // Sharp then processes each buffer and discards it immediately to prevent
+    // heap buildup.
+    const pages = await pdfToPng(filePath, { viewportScale: 0.4, disableFontFace: true });
+    console.log(`[OCR] Processing ${pages.length} pages sequentially to save RAM...`);
 
     let fullText = '';
 
@@ -75,33 +78,33 @@ const extractWithNemotronOCR = async (filePath: string, apiKey: string): Promise
         const content = pages[i].content;
         if (!content) continue;
 
-        // Convert PNG → JPEG quality 50 (reduces ~414KB PNG → ~31KB JPEG)
-        const jpegBuf = await sharp(content).jpeg({ quality: 50 }).toBuffer();
-        const b64 = jpegBuf.toString('base64');
-        const sizeKB = Math.round(b64.length / 1024);
-
-        console.log(`[OCR] Page ${i + 1}/${pages.length} (${sizeKB}KB)...`);
-
         try {
+            // Compress heavily: PNG -> JPEG (Quality 40)
+            // Smaller payloads (under 100KB) process faster and use less memory
+            const jpegBuf = await sharp(content).jpeg({ quality: 40 }).toBuffer();
+            const b64 = jpegBuf.toString('base64');
+
             const res = await axios.post(OCR_URL, {
                 input: [{ type: 'image_url', url: `data:image/jpeg;base64,${b64}` }]
             }, {
                 headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
-                timeout: 15000
+                timeout: 25000 // Extended timeout for large pages
             });
 
-            // text_prediction is { text: string, confidence: number } — confirmed via live API debug
             const detections: any[] = res.data?.data?.[0]?.text_detections || [];
             const pageText = detections.map((d: any) => d.text_prediction?.text || '').join(' ').trim();
-            console.log(`[OCR]   └─ ${pageText.length} chars`);
             fullText += `\n--- PAGE ${i + 1} ---\n${pageText}\n`;
+            
+            // Clean up: Request GC tip for Node
+            (pages[i] as any).content = null; 
+
         } catch (err: any) {
-            console.error(`[OCR] Page ${i + 1} failed:`, err?.response?.data || err.message);
-            fullText += `\n--- PAGE ${i + 1} ---\n[OCR failed]\n`;
+            console.error(`[OCR] Page ${i + 1} failed:`, err.message);
+            fullText += `\n--- PAGE ${i + 1} ---\n[Scan failed]\n`;
         }
 
-        // Small cooldown to avoid rate limiting
-        if (i < pages.length - 1) await new Promise(r => setTimeout(r, 600));
+        // Delay to allow Render's Event Loop to breathe
+        if (i < pages.length - 1) await new Promise(r => setTimeout(r, 800));
     }
 
     return fullText;
