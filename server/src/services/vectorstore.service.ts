@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const CHROMA_BASE = process.env.CHROMA_URL || 'https://api.trychroma.com';
-const TENANT = process.env.CHROMA_TENANT || '53429d4f-f9b4-404a-99f3-e6636070158c';
-const DATABASE = process.env.CHROMA_DATABASE || 'ARYNOX';
-const CHROMA_API_KEY = process.env.CHROMA_API_KEY || 'ck-9JTZgGZ1G2TEx2wLSQtiEUTyhqsCL3qLz2pcgm358NYn';
+const CHROMA_BASE = process.env.CHROMA_URL;
+const TENANT = process.env.CHROMA_TENANT;
+const DATABASE = process.env.CHROMA_DATABASE;
+const CHROMA_API_KEY = process.env.CHROMA_API_KEY;
 
 const API_BASE = `${CHROMA_BASE}/api/v2/tenants/${TENANT}/databases/${DATABASE}/collections`;
 
