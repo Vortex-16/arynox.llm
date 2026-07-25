@@ -212,13 +212,16 @@ export const askChat = async (req: Request, res: Response, next: NextFunction): 
             sourceFilter = andClauses.length > 1 ? { "$and": andClauses } : andClauses[0];
         } else if (department) {
             const deptSlug = department.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_');
-            collectionsToSearch = await listCollections(`${deptSlug}__`);
+            const deptCols = await listCollections(`${deptSlug}__`);
+            const allCols = await listCollections();
+            collectionsToSearch = Array.from(new Set([...deptCols, ...allCols, 'college_documents']));
+            sourceFilter = null; // Rely on vector similarity ranking across department collections
+        } else {
+            collectionsToSearch = await listCollections();
             if (!collectionsToSearch.includes('college_documents')) {
                 collectionsToSearch.push('college_documents');
             }
-            sourceFilter = { department: { "$eq": department } };
-        } else {
-            collectionsToSearch = ['college_documents'];
+            sourceFilter = null;
         }
 
         // ── Throttled fan-out (replaces the unsafe Promise.all) ───────────────

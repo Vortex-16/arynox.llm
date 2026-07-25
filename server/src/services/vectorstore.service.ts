@@ -56,19 +56,11 @@ const getCollectionId = async (collectionName: string): Promise<string> => {
     try {
         const res = await withRetry(() => axios.get(`${API_BASE}/${collectionName}`, { headers: CHROMA_HEADERS }));
         const colId = res.data.id;
+        collectionIdCache[collectionName] = colId;
 
-        // Health check: recreate if dimension is wrong
-        const healthy = await verifyCollectionDimension(colId);
-        if (!healthy) {
-            console.warn(`[ChromaDB] Recreating "${collectionName}" due to dimension mismatch…`);
-            try {
-                await axios.delete(`${API_BASE}/${colId}`, { headers: CHROMA_HEADERS });
-            } catch (_) { /* may already be gone */ }
-            // Fall through to create new
-        } else {
-            collectionIdCache[collectionName] = colId;
-            return colId;
-        }
+        // Health check log only — do NOT drop collection
+        verifyCollectionDimension(colId).catch(() => {});
+        return colId;
     } catch (e: any) {
         if (e.response?.status !== 404) throw e;
     }

@@ -11,6 +11,7 @@ import Onboarding from './onboarding/Onboarding'
 import logoSvg from './assets/logo.svg'
 import Features from './components/Features'
 import TeamMembers from './components/TeamMembers'
+import UserGuide from './components/UserGuide'
 import CustomCursor from './components/CustomCursor'
 import AdminDashboard from './admin/admin_dashboard'
 import { useGSAP } from '@gsap/react'
@@ -107,6 +108,9 @@ function App() {
               </div>
               <div className="w-[100vw] h-full shrink-0">
                 <TeamMembers scrollProgress={teamProgress} footerProgress={footerProgress} />
+              </div>
+              <div className="w-[100vw] h-full shrink-0 overflow-y-auto">
+                <UserGuide />
               </div>
             </div>
           </div>

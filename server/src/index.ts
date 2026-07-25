@@ -38,8 +38,14 @@ app.use('/api/users', userRoutes);
 app.use('/api/doubts', doubtRoutes);
 app.use('/api/admin', adminRoutes);
 
+import fs from 'fs';
+
 // Static Asset Serving (Allows Teachers to View Uploaded PDFs)
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Serve Client Frontend (Production)
 if (process.env.NODE_ENV === 'production') {

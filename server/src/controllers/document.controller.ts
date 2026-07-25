@@ -96,25 +96,31 @@ export const getDocuments = async (req: Request, res: Response, next: NextFuncti
         // 🛡️ SECURITY: Server-side Role-Based Filtering
         if (user?.role === 'student') {
             const fullUser = await User.findById(user.userId);
-            if (fullUser) {
-                if (fullUser.department) filter.department = fullUser.department;
-                if (fullUser.className)  filter.className  = fullUser.className;
-                if (fullUser.semester) {
-                    const semVal = fullUser.semester; // e.g. "Sem 3"
-                    const altSemVal = semVal.replace('Sem ', 'Semester '); // e.g. "Semester 3"
-                    filter.semester = { $in: [semVal, altSemVal] };
+            if (fullUser && fullUser.department) {
+                const deptStr = fullUser.department.trim();
+                // Match department or shorthand code (e.g. Computer Science <-> CSE)
+                const deptRegex = new RegExp(`^${deptStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+                filter.department = { $regex: deptRegex };
+
+                if (subject) {
+                    filter.subject = { $regex: new RegExp(`^${(subject as string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
                 }
             }
-        }
- else {
+        } else {
             // Teachers/Admins can see everything or apply elective filters via query
-            if (className) filter.className = className;
-            if (department) filter.department = department;
-            if (semester)   filter.semester   = semester;
-            if (subject)    filter.subject    = subject;
+            if (className) filter.className = { $regex: new RegExp(String(className), 'i') };
+            if (department) filter.department = { $regex: new RegExp(String(department), 'i') };
+            if (semester) filter.semester = { $regex: new RegExp(String(semester), 'i') };
+            if (subject) filter.subject = { $regex: new RegExp(String(subject), 'i') };
         }
 
-        const docs = await DocumentMeta.find(filter).sort({ uploadedAt: -1 });
+        let docs = await DocumentMeta.find(filter).sort({ uploadedAt: -1 });
+
+        // Fallback for students: if strict filter returns empty, return all documents for department
+        if (user?.role === 'student' && docs.length === 0 && filter.department) {
+            docs = await DocumentMeta.find({ department: filter.department }).sort({ uploadedAt: -1 });
+        }
+
         res.status(200).json(docs);
     } catch (error) {
         console.error("Fetch Docs Error:", error);
