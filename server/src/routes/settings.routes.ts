@@ -5,6 +5,6 @@ import { authenticate, requireRole } from '../middlewares/auth.middleware';
 const router = Router();
 
 router.get('/', authenticate, getSettings);
-router.post('/update', authenticate, requireRole('teacher', 'admin'), updateSettings);
+router.post('/update', authenticate, requireRole(['teacher', 'admin']), updateSettings);
 
 export default router;
