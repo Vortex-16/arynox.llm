@@ -31,7 +31,7 @@ function App() {
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       const speed = 0.05;
-      targetX.current = Math.max(0, Math.min(1700, targetX.current + e.deltaY * speed));
+      targetX.current = Math.max(0, Math.min(2500, targetX.current + e.deltaY * speed));
     };
 
     window.addEventListener('wheel', handleWheel, { passive: true });
@@ -49,8 +49,10 @@ function App() {
           xPos = currentX.current;
         } else if (currentX.current <= 400) {
           xPos = 100;
+        } else if (currentX.current <= 1400) {
+          xPos = Math.min(200, 100 + (currentX.current - 400) * (100 / 1000));
         } else {
-          xPos = Math.min(200, 100 + (currentX.current - 400));
+          xPos = Math.min(300, 200 + (currentX.current - 1400) * (100 / 1000));
         }
         gsap.set(sliderRef.current, { x: `-${xPos}vw` });
       }
@@ -75,7 +77,7 @@ function App() {
       <Routes>
         <Route path="/" element={
           <div ref={horizontalRef} className="relative w-full h-screen overflow-hidden bg-[#FF5458]">
-            <div ref={sliderRef} className="flex h-full w-[300vw]">
+            <div ref={sliderRef} className="flex h-full w-[400vw]">
               
               <main className="relative w-[100vw] h-full flex flex-col items-center bg-[#FF5458] overflow-hidden shrink-0">
                 <div className="hidden lg:block absolute inset-0 w-full h-full">
@@ -93,14 +95,14 @@ function App() {
                 <div className="absolute z-50 pointer-events-none select-none text-center font-extrabold text-[#F9E95C] -translate-x-1/2 -translate-y-1/2 left-[50%] top-[35%] w-[309px] text-[16px] leading-[23px] md:left-[50%] md:top-[45%] md:w-[750px] md:text-[38px] md:leading-[50px] lg:left-[50%] lg:top-[53%] lg:w-[862px] lg:text-[51px] lg:leading-[55px]">
                   Leverage AI to grow your <br className="hidden md:block lg:hidden" /> knowledge and study immersively.
                 </div>
-                <div className="absolute z-50 flex items-center gap-4 -translate-x-1/2 -translate-y-1/2 left-[50%] top-[48%] md:left-[50%] md:top-[58%] lg:left-[50%] lg:top-[66%]">
-                  <Link to="/login" className="px-8 py-3 rounded-full border border-[#F9E95C]/30 text-[#F9E95C] hover:bg-[#F9E95C] hover:text-[#FF5458] transition-all font-bold text-[15px] shadow-lg backdrop-blur-sm">Login</Link>
-                  <Link to="/signup" className="px-6 py-3 md:px-8 rounded-full bg-[#F9E95C] text-[#FF5458] shadow-xl hover:bg-white hover:scale-[1.05] transition-all font-bold text-[15px] whitespace-nowrap">Sign Up</Link>
+                <div className="absolute z-50 flex items-center gap-3 -translate-x-1/2 -translate-y-1/2 left-[50%] top-[48%] md:left-[50%] md:top-[58%] lg:left-[50%] lg:top-[66%]">
+                  <Link to="/login" className="px-6 py-3 rounded-full border border-[#F9E95C]/30 text-[#F9E95C] hover:bg-[#F9E95C] hover:text-[#FF5458] transition-all font-bold text-[14px] shadow-lg backdrop-blur-sm">Login</Link>
+                  <Link to="/signup" className="px-6 py-3 rounded-full bg-[#F9E95C] text-[#FF5458] shadow-xl hover:bg-white hover:scale-[1.05] transition-all font-bold text-[14px] whitespace-nowrap">Sign Up</Link>
+                  <Link to="/guide" className="px-6 py-3 rounded-full border border-white/40 bg-black/20 text-white hover:bg-white hover:text-black transition-all font-bold text-[14px] backdrop-blur-md">User Guide</Link>
                 </div>
                 <div className="absolute z-50 pointer-events-none flex justify-center -translate-x-1/2 left-[50%] top-[55%] w-[140px] md:left-[50%] md:top-[66%] md:w-[200px] lg:left-[50%] lg:top-[74%] lg:w-[260px]">
                   <img src={logoSvg} alt="Logo" className="w-full h-auto opacity-90" />
                 </div>
-                {/* Grain effect removed for visibility */}
               </main>
 
               <div className="w-[100vw] h-full shrink-0">
@@ -119,6 +121,16 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/guide" element={
+          <div className="min-h-screen bg-[#121212] overflow-y-auto">
+            <div className="p-6">
+              <Link to="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all font-bold text-sm">
+                ← Back to Home
+              </Link>
+            </div>
+            <UserGuide />
+          </div>
+        } />
 
         {/* Guarded Routes */}
         <Route path="/onboarding" element={

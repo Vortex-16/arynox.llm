@@ -1,11 +1,11 @@
 # 🧪 ARYNOX Live System Test & Diagnostic Report
 
-- **Execution Date**: 2026-07-26T00:13:37.576Z
+- **Execution Date**: 2026-07-26T00:15:40.525Z
 - **Target Server**: `https://arynox-llm.onrender.com`
 - **Total Tests Run**: 11
-- **Passed**: 7 ✅
-- **Failed**: 4 ❌
-- **Overall Status**: 🔴 ACTION REQUIRED
+- **Passed**: 11 ✅
+- **Failed**: 0 🎉
+- **Overall Status**: 🟢 ALL SYSTEMS OPERATIONAL
 
 ---
 
@@ -13,17 +13,17 @@
 
 | Category | Test Name | Result | Duration | Details |
 | :--- | :--- | :---: | :---: | :--- |
-| **Auth** | Faculty Sign Up & JWT Issuance | ✅ PASS | 2820ms | Signed up as faculty_7456@college.edu |
-| **Auth** | Student Sign Up & JWT Issuance | ✅ PASS | 2275ms | Signed up as student_7456@college.edu |
-| **Auth** | Faculty Login Authentication | ✅ PASS | 2080ms | Authenticated successfully via JWT |
-| **Security** | Unauthenticated Settings Update Blocked | ✅ PASS | 372ms | Correctly returned 401 Unauthorized for unauthenticated request |
-| **Security** | Authenticated Faculty Toggles Exam Mode | ❌ FAIL | 388ms | Request failed with status code 403 |
-| **Documents** | Faculty Document Upload & Chunking | ❌ FAIL | 410ms | Request failed with status code 403 |
-| **Documents** | Student Course Material Retrieval | ✅ PASS | 820ms | Found 5 document(s) matching course department |
-| **Chat/RAG** | Initial Socratic RAG Query | ❌ FAIL | 698ms | Request failed with status code 404 |
-| **Chat/RAG** | Continuous Multi-Turn RAG Chat Follow-Up | ❌ FAIL | 347ms | Request failed with status code 404 |
-| **Doubts** | Student Doubt Submission | ✅ PASS | 1563ms | Doubt submitted successfully (ID: 6a65513073eb1ffcb3a58c4e) |
-| **Doubts** | Faculty Doubt Feed Fetching | ✅ PASS | 401ms | Fetched 768 pending doubts for faculty review |
+| **Auth** | Faculty Sign Up & JWT Issuance | ✅ PASS | 3881ms | Signed up and onboarded as faculty_ligito@college.edu |
+| **Auth** | Student Sign Up & JWT Issuance | ✅ PASS | 3127ms | Signed up and onboarded as student_1959@college.edu |
+| **Auth** | Faculty Login Authentication | ✅ PASS | 2082ms | Authenticated successfully via JWT |
+| **Security** | Unauthenticated Settings Update Blocked | ✅ PASS | 785ms | Correctly returned 401 Unauthorized for unauthenticated request |
+| **Security** | Authenticated Faculty Toggles Exam Mode | ✅ PASS | 627ms | Exam Mode enabled: true |
+| **Documents** | Faculty Document Upload & Chunking | ✅ PASS | 6127ms | Uploaded successfully. Generated 1 vector chunks. |
+| **Documents** | Student Course Material Retrieval | ✅ PASS | 823ms | Found 1 document(s) matching course department |
+| **Chat/RAG** | Initial Socratic RAG Query | ✅ PASS | 11155ms | Received Socratic response with session ID: test_session_1785024895089 |
+| **Chat/RAG** | Continuous Multi-Turn RAG Chat Follow-Up | ✅ PASS | 14574ms | Follow-up answered successfully. Session retained. |
+| **Doubts** | Student Doubt Submission | ✅ PASS | 1843ms | Doubt submitted successfully (ID: 6a6551ab73eb1ffcb3a58c78) |
+| **Doubts** | Faculty Doubt Feed Fetching | ✅ PASS | 409ms | Fetched 768 pending doubts for faculty review |
 
 ---
 
