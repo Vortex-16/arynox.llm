@@ -2,7 +2,8 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
-const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const rawUrl = process.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawUrl.trim().replace(/["']/g, '');
 
 interface TestResult {
   name: string;
@@ -84,6 +85,8 @@ async function generateReport() {
 
   const reportPath = path.join(process.cwd(), 'Report.md');
   fs.writeFileSync(reportPath, markdown, 'utf-8');
+  const rootReportPath = path.join(process.cwd(), '..', 'Report.md');
+  try { fs.writeFileSync(rootReportPath, markdown, 'utf-8'); } catch (_) {}
   console.log(`\n📄 Report.md generated successfully at: ${reportPath}`);
 }
 
@@ -96,9 +99,9 @@ async function main() {
   let sampleDocId = '';
   let activeSessionId = 'test_session_' + Date.now();
 
-  const timestampSuffix = Math.floor(Math.random() * 10000);
-  const teacherEmail = `faculty_${timestampSuffix}@college.edu`;
-  const studentEmail = `student_${timestampSuffix}@college.edu`;
+  const randomLetters = Math.random().toString(36).substring(2, 8).replace(/[0-9]/g, 'a');
+  const teacherEmail = `faculty_${randomLetters}@college.edu`;
+  const studentEmail = `student_${Math.floor(Math.random() * 10000)}@college.edu`;
   const password = 'TestPassword123!';
 
   // Category 1: Authentication & User Registration
@@ -113,7 +116,16 @@ async function main() {
     });
     teacherToken = res.data.token;
     if (!teacherToken) throw new Error('No JWT token returned');
-    return `Signed up as ${teacherEmail}`;
+
+    // Complete onboarding for teacher to lock role & department
+    const onboardRes = await axios.post(
+      `${API_BASE_URL}/api/auth/onboarding`,
+      { role: 'teacher', department: 'Computer Science' },
+      { headers: { Authorization: `Bearer ${teacherToken}` } }
+    );
+    if (onboardRes.data.token) teacherToken = onboardRes.data.token;
+
+    return `Signed up and onboarded as ${teacherEmail}`;
   });
 
   await runTest('Student Sign Up & JWT Issuance', 'Auth', async () => {
@@ -128,7 +140,16 @@ async function main() {
     });
     studentToken = res.data.token;
     if (!studentToken) throw new Error('No JWT token returned');
-    return `Signed up as ${studentEmail}`;
+
+    // Complete onboarding for student
+    const onboardRes = await axios.post(
+      `${API_BASE_URL}/api/auth/onboarding`,
+      { role: 'student', department: 'Computer Science', className: '2nd Year', semester: 'Sem 3' },
+      { headers: { Authorization: `Bearer ${studentToken}` } }
+    );
+    if (onboardRes.data.token) studentToken = onboardRes.data.token;
+
+    return `Signed up and onboarded as ${studentEmail}`;
   });
 
   await runTest('Faculty Login Authentication', 'Auth', async () => {
@@ -209,7 +230,7 @@ Dijkstra's Algorithm finds the shortest path from a single source node to all ot
   console.log('\n--- Phase 4: Socratic RAG Continuous Chat Engine ---');
   await runTest('Initial Socratic RAG Query', 'Chat/RAG', async () => {
     const res = await axios.post(
-      `${API_BASE_URL}/api/chat`,
+      `${API_BASE_URL}/api/chat/ask`,
       {
         query: 'What is Dijkstra algorithm and how does it find shortest paths?',
         sessionId: activeSessionId,
@@ -223,7 +244,7 @@ Dijkstra's Algorithm finds the shortest path from a single source node to all ot
 
   await runTest('Continuous Multi-Turn RAG Chat Follow-Up', 'Chat/RAG', async () => {
     const res = await axios.post(
-      `${API_BASE_URL}/api/chat`,
+      `${API_BASE_URL}/api/chat/ask`,
       {
         query: 'Can you explain the time complexity for graph traversal?',
         sessionId: activeSessionId,
