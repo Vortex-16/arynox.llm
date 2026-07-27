@@ -123,7 +123,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/guide" element={
-          <div className="min-h-screen w-full bg-[#FF5458] overflow-y-auto">
+          <div className="h-screen w-full bg-[#FF5458] overflow-y-auto custom-scrollbar">
             <div className="p-6 pb-2 max-w-6xl mx-auto flex items-center justify-between">
               <Link to="/" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-black/20 text-[#F9E95C] border border-[#F9E95C]/30 hover:bg-[#F9E95C] hover:text-[#FF5458] transition-all font-bold text-sm shadow-lg backdrop-blur-md">
                 ← Back to Home
